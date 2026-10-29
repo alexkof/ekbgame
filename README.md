@@ -5,11 +5,11 @@
 
 ## Где поиграть
 
-- Текущая версия (`main`): https://ekbgame.pages.dev/
-- Версия ветки: `https://<ветка>.ekbgame.pages.dev/`
-- Первый прототип «Живой город»: https://ekbgame.pages.dev/prototype/
+- Текущая версия (`main`): https://alexkof.github.io/ekbgame/
+- Превью веток: https://alexkof.github.io/ekbgame/preview/
+- Первый прототип «Живой город»: https://alexkof.github.io/ekbgame/prototype/
 
-Публикация на Cloudflare Pages происходит автоматически при каждом push (см. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+Публикация происходит автоматически при каждом push (см. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
 ## Разработка
 
