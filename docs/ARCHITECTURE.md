@@ -7,7 +7,7 @@
 
 - **TypeScript** (strict) + **Vite** — сборка статического сайта без сервера.
 - **Vitest** — модульные тесты, **Prettier** — форматирование.
-- Хостинг — **GitHub Pages** (ветка `gh-pages`), сборка и публикация — **GitHub Actions**.
+- Хостинг — **Cloudflare Pages**, сборка и публикация — **GitHub Actions** (репозиторий остаётся приватным).
 - UI-фреймворк и движок отрисовки карты пока не выбраны.
 
 ## Слои
@@ -34,26 +34,35 @@ tests/    — тесты.
 
 ## Сборка и публикация
 
-| Ветка        | Адрес                                                |
-| ------------ | ---------------------------------------------------- |
-| `main`       | `https://alexkof.github.io/ekbgame/`                 |
-| любая другая | `https://alexkof.github.io/ekbgame/preview/<ветка>/` |
-| список веток | `https://alexkof.github.io/ekbgame/preview/`         |
-| прототип     | `<адрес версии>/prototype/`                          |
+| Ветка        | Адрес                                |
+| ------------ | ------------------------------------ |
+| `main`       | `https://ekbgame.pages.dev/`         |
+| любая другая | `https://<ветка>.ekbgame.pages.dev/` |
+| прототип     | `<адрес версии>/prototype/`          |
+
+В адресе ветки `/` и прочие символы заменяются на `-`, имя обрезается до 28 символов
+(например, `claude/dreamy-ritchie-atas1i` → `claude-dreamy-ritchie-atas1i.ekbgame.pages.dev`).
+Если имя `ekbgame.pages.dev` уже занято, Cloudflare добавит суффикс — точные адреса
+выводятся в сводке (Summary) каждого запуска workflow.
 
 Workflow [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml):
 
 1. `build` — `npm ci`, `npm run check` (формат, типы, тесты), `npm run build`.
-2. `deploy` — скрипт [`scripts/publish-pages.sh`](../scripts/publish-pages.sh) кладёт `dist/`
-   в ветку `gh-pages` (main → в корень, остальные → в `preview/<slug>/`), обновляет список превью.
-3. `cleanup-preview` — при удалении ветки удаляет её превью.
+2. `deploy` — создаёт проект `ekbgame` в Cloudflare Pages, если его ещё нет, и выкладывает
+   `dist/` через `wrangler pages deploy`. Без секретов шаг пропускается с предупреждением.
 
-Сборка использует относительные пути (`base: './'`), поэтому одна и та же сборка работает
-в любой подпапке. Внизу страницы показаны ветка, коммит и время сборки.
+Сборка использует относительные пути (`base: './'`). Внизу страницы показаны ветка, коммит
+и время сборки.
 
-### Однократная настройка репозитория
+### Однократная настройка
 
-1. Settings → Pages → Source: **Deploy from a branch**, Branch: **`gh-pages`** / `(root)`.
-   Ветка `gh-pages` появится после первого успешного запуска workflow.
-2. GitHub Pages для **приватного** репозитория доступен только на платных планах
-   (Pro/Team/Enterprise), и сайт при этом всё равно публичный. Варианты — см. QUESTIONS.md.
+1. Зарегистрироваться на https://dash.cloudflare.com (бесплатный план).
+2. **Account ID**: в панели Cloudflare → Workers & Pages → справа «Account ID» → скопировать.
+3. **API-токен**: My Profile → API Tokens → Create Token → Create Custom Token;
+   Permissions: `Account` · `Cloudflare Pages` · `Edit`; Create → скопировать токен.
+4. В GitHub: репозиторий → Settings → Secrets and variables → Actions → New repository secret:
+   `CLOUDFLARE_ACCOUNT_ID` и `CLOUDFLARE_API_TOKEN`.
+5. Перезапустить последний workflow (Actions → Build & Deploy → Re-run all jobs) или сделать push.
+
+Закрыть превью-версии паролем можно в Cloudflare: проект → Settings → Access policy
+(Cloudflare Access, бесплатно до 50 пользователей).
