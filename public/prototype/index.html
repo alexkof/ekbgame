@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#f1e8d7"><title>МЭР · Екатеринбург — Живой город</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="app" id="app">
+  <header class="header"><div class="brand"><div class="logo">МЭР</div><div class="brand2">ЕКАТЕРИНБУРГ<small>ЖИВОЙ ГОРОД · ПРОТОТИП</small></div></div><button class="day" id="timeButton"><small>ДЕНЬ <span id="dayText">1 / 12</span></small><strong id="timeText">09:00</strong></button></header>
+  <section class="dashboard"><button class="budget-stat" data-open="budget"><b>🪙 <span id="cash">12,0</span></b><small>КАЗНА · млрд ₽</small><em id="income">+0,2/день</em></button><button class="traffic-stat" data-open="traffic"><b>🚦 <span id="trafficNum">5</span></b><small>ПРОБКИ</small><span class="traffic-meter"><i id="trafficBar"></i></span></button><button class="teams-stat" data-open="staff"><b>👷 <span id="teamCount">2</span></b><small>БРИГАДЫ</small><em id="teamBusy">2 свободны</em></button></section>
+  <button class="moods" id="moodButton" data-open="moods"><span class="mood-label">ЖИТЕЛИ <small id="moodCaption">Большинство довольны</small></span><span class="faces" id="faces" aria-label="Настроение жителей"></span><span class="mood-total" id="moodTotal">😊 18</span></button>
+  <button class="task" id="taskButton"><span class="task-symbol" id="taskIcon">💧</span><span class="task-message"><b id="taskTitle">Прорыв трубы!</b><small id="taskSub">Нажми 💧 на карте</small></span><span class="taskArrow">›</span></button>
+  <main class="maparea" id="maparea"><div class="mapscroll" id="mapscroll"><div class="world" id="world">
+    <img class="mapimg" src="assets/center_map.webp" draggable="false" alt="Стилизованная карта центра Екатеринбурга">
+    <svg class="traffic-layer" viewBox="0 0 802 1240" preserveAspectRatio="none" aria-label="Цвета показывают пробки" id="trafficSvg"><g id="trafficSegments"></g></svg>
+    <div class="map-objects" id="mapObjects"></div><div class="crew-layer" id="crewLayer"></div><div class="actor-layer" id="actors"><div class="actor tram" id="tramActor">🚋</div><div class="actor car" id="carActor1">🚕</div><div class="actor car" id="carActor2">🚙</div></div><div class="effects" id="effects"></div>
+  </div></div>
+    <div class="legend"><span class="dot live"></span><span id="speedLegend">ГОРОД В ДВИЖЕНИИ</span><span class="legend-colors"><i style="background:#1aaa6c"></i><i style="background:#f5b739"></i><i style="background:#e2473b"></i></span></div>
+    <div class="map-hint" id="mapHint">Нажми 💧, чтобы отправить бригаду</div>
+    <div class="side-tools"><button data-open="staff" title="Нанять работников">👷<small>ШТАТ</small></button><button data-open="incidents" title="Проблемы города">🚨<small id="openProblems">2</small></button><button data-build="park" title="Построить сквер">🌳<small>3</small></button><button data-build="shop" title="Построить магазин">🏪<small>5</small></button></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <footer class="foot"><button class="minor" data-open="staff"><span>👷</span><small>БРИГАДЫ</small></button><button class="minor" data-open="budget"><span>💰</span><small>БЮДЖЕТ</small></button><div class="speedgroup"><button class="speed" data-speed="0" title="Пауза">Ⅱ</button><button class="speed active" data-speed="1" title="Играть">▶</button><button class="speed" data-speed="3" title="Ускорение ×3">×3</button><button class="speed" data-speed="6" title="Ускорение ×6">×6</button></div></footer>
+  <div class="shade hidden" id="shade"></div><section class="sheet hidden" id="sheet" role="dialog" aria-modal="true" aria-label="Управление городом"><div class="handle"></div><button id="sheetClose" class="sheet-close" aria-label="Закрыть">✕</button><div id="sheetContent"></div></section>
+  <div class="end hidden" id="end"><div class="endcard"><div class="endicon" id="endIcon">🏆</div><h2 id="endTitle"></h2><p id="endText"></p><button data-action="reset" class="primary">Начать новую игру ↻</button></div></div>
+</div><script src="game.js"></script></body></html>
