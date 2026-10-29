@@ -7,7 +7,7 @@
 
 - **TypeScript** (strict) + **Vite** — сборка статического сайта без сервера.
 - **Vitest** — модульные тесты, **Prettier** — форматирование.
-- Хостинг — **GitHub Pages** (ветка `gh-pages`), сборка и публикация — **GitHub Actions**.
+- Хостинг — **GitHub Pages**, сборка и публикация — **GitHub Actions**.
 - UI-фреймворк и движок отрисовки карты пока не выбраны.
 
 ## Слои
@@ -34,26 +34,18 @@ tests/    — тесты.
 
 ## Сборка и публикация
 
-| Ветка        | Адрес                                                |
-| ------------ | ---------------------------------------------------- |
-| `main`       | `https://alexkof.github.io/ekbgame/`                 |
-| любая другая | `https://alexkof.github.io/ekbgame/preview/<ветка>/` |
-| список веток | `https://alexkof.github.io/ekbgame/preview/`         |
-| прототип     | `<адрес версии>/prototype/`                          |
+Работаем в одной ветке `main`. Каждый push в неё публикуется автоматически:
 
-Workflow [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml):
+- игра: https://alexkof.github.io/ekbgame/
+- прототип: https://alexkof.github.io/ekbgame/prototype/
 
-1. `build` — `npm ci`, `npm run check` (формат, типы, тесты), `npm run build`.
-2. `deploy` — скрипт [`scripts/publish-pages.sh`](../scripts/publish-pages.sh) кладёт `dist/`
-   в ветку `gh-pages` (main → в корень, остальные → в `preview/<slug>/`), обновляет список превью.
-3. `cleanup-preview` — при удалении ветки удаляет её превью.
+Workflow [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml): `npm ci` →
+`npm run check` (формат, типы, тесты) → `npm run build` → публикация `dist/` через
+`actions/deploy-pages`. Если проверки не прошли, сайт не обновляется.
 
-Сборка использует относительные пути (`base: './'`), поэтому одна и та же сборка работает
-в любой подпапке. Внизу страницы показаны ветка, коммит и время сборки.
+Внизу страницы показаны коммит и время сборки — видно, какая версия открыта.
 
-### Однократная настройка репозитория
+### Однократная настройка
 
-1. Settings → Pages → Source: **Deploy from a branch**, Branch: **`gh-pages`** / `(root)`.
-   Ветка `gh-pages` появится после первого успешного запуска workflow.
-2. Репозиторий должен оставаться публичным: на бесплатном плане GitHub Pages работает только
-   для публичных репозиториев.
+Settings → Pages → Build and deployment → Source: **GitHub Actions**. Репозиторий должен
+оставаться публичным: на бесплатном плане GitHub Pages работает только для публичных.

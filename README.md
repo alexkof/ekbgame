@@ -6,10 +6,9 @@
 ## Где поиграть
 
 - Текущая версия (`main`): https://alexkof.github.io/ekbgame/
-- Превью веток: https://alexkof.github.io/ekbgame/preview/
 - Первый прототип «Живой город»: https://alexkof.github.io/ekbgame/prototype/
 
-Публикация происходит автоматически при каждом push (см. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+Публикация происходит автоматически при каждом push в `main` (см. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
 ## Разработка
 

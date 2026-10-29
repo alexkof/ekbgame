@@ -6,4 +6,5 @@
   состояние только JSON-совместимое, изменения только через `applyAction`.
 - `public/prototype/` — исходный прототип, не править (кроме осознанных исправлений).
 - Принятые решения записывать в `docs/QUESTIONS.md` → «Решения».
-- Публикация: любая ветка → `/preview/<ветка>/`, `main` → корень сайта (`.github/workflows/deploy.yml`).
+- Одна ветка `main`; каждый push в неё публикуется на https://alexkof.github.io/ekbgame/
+  (`.github/workflows/deploy.yml`).
