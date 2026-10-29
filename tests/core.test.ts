@@ -37,7 +37,23 @@ describe('applyAction', () => {
   });
 
   it('состояние сериализуется в JSON без потерь', () => {
-    const s = applyAction(createInitialState(7), { type: 'endTurn' });
+    let s = applyAction(createInitialState(7), { type: 'endTurn' });
+    s = applyAction(s, { type: 'setStructure', objectId: 'vysotsky', model: null });
     expect(JSON.parse(JSON.stringify(s))).toEqual(s);
+  });
+
+  it('объект на участке можно убрать, заменить и вернуть', () => {
+    const s0 = createInitialState(1);
+    const removed = applyAction(s0, { type: 'setStructure', objectId: 'vysotsky', model: null });
+    expect(removed.cityMap.structures).toEqual({ vysotsky: null });
+    expect(s0.cityMap.structures).toEqual({});
+    const park = applyAction(removed, {
+      type: 'setStructure',
+      objectId: 'vysotsky',
+      model: 'square-park',
+    });
+    expect(park.cityMap.structures.vysotsky).toBe('square-park');
+    const back = applyAction(park, { type: 'resetStructure', objectId: 'vysotsky' });
+    expect(back.cityMap.structures).toEqual({});
   });
 });

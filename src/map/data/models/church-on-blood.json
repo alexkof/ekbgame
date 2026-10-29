@@ -1,0 +1,196 @@
+{
+  "id": "church-on-blood",
+  "name": "Храм на Крови",
+  "source": "Контур: OSM way/46993203; облик — по фото (Викисклад).",
+  "parts": [
+    {
+      "type": "prism",
+      "outline": [
+        [-19.6, 1.1],
+        [-19.0, -6.1],
+        [-13.8, -9.9],
+        [-12.7, -17.3],
+        [-5.6, -16.3],
+        [-0.2, -19.7],
+        [6.9, -18.4],
+        [10.4, -14.2],
+        [17.5, -13.2],
+        [16.3, -6.1],
+        [19.6, -0.1],
+        [18.2, 6.3],
+        [13.7, 11.0],
+        [12.6, 17.2],
+        [5.4, 16.2],
+        [0.6, 19.9],
+        [-6.0, 19.1],
+        [-10.3, 14.0],
+        [-17.2, 13.0],
+        [-16.2, 6.5]
+      ],
+      "z": [0, 4],
+      "color": "#b65a40",
+      "roof": "#c9b9a5",
+      "facade": "none"
+    },
+    {
+      "type": "prism",
+      "outline": [
+        [-18.5, 1.0],
+        [-17.9, -5.8],
+        [-13.0, -9.3],
+        [-12.0, -16.3],
+        [-5.3, -15.4],
+        [-0.2, -18.6],
+        [6.5, -17.4],
+        [9.8, -13.4],
+        [16.5, -12.5],
+        [15.4, -5.8],
+        [18.5, -0.1],
+        [17.2, 5.9],
+        [12.9, 10.4],
+        [11.9, 16.2],
+        [5.1, 15.3],
+        [0.6, 18.8],
+        [-5.7, 18.0],
+        [-9.7, 13.2],
+        [-16.2, 12.3],
+        [-15.3, 6.1]
+      ],
+      "z": [4, 22],
+      "color": "#f7f4ee",
+      "roof": "#d9cfc0",
+      "facade": "arches",
+      "floor": 9
+    },
+    {
+      "type": "cylinder",
+      "center": [-9.5, -9.5],
+      "radius": 3.2,
+      "z": [22, 29],
+      "color": "#f7f4ee",
+      "facade": "arches",
+      "floor": 6,
+      "segments": 12
+    },
+    {
+      "type": "dome",
+      "center": [-9.5, -9.5],
+      "radius": 3.4,
+      "z": 29,
+      "height": 6.5,
+      "shape": "onion",
+      "color": "#e2b23b",
+      "segments": 12
+    },
+    {
+      "type": "sign",
+      "kind": "cross",
+      "at": [-9.5, -9.5, 35.5],
+      "size": 3.5
+    },
+    {
+      "type": "cylinder",
+      "center": [9.5, -9.5],
+      "radius": 3.2,
+      "z": [22, 29],
+      "color": "#f7f4ee",
+      "facade": "arches",
+      "floor": 6,
+      "segments": 12
+    },
+    {
+      "type": "dome",
+      "center": [9.5, -9.5],
+      "radius": 3.4,
+      "z": 29,
+      "height": 6.5,
+      "shape": "onion",
+      "color": "#e2b23b",
+      "segments": 12
+    },
+    {
+      "type": "sign",
+      "kind": "cross",
+      "at": [9.5, -9.5, 35.5],
+      "size": 3.5
+    },
+    {
+      "type": "cylinder",
+      "center": [9.5, 9.5],
+      "radius": 3.2,
+      "z": [22, 29],
+      "color": "#f7f4ee",
+      "facade": "arches",
+      "floor": 6,
+      "segments": 12
+    },
+    {
+      "type": "dome",
+      "center": [9.5, 9.5],
+      "radius": 3.4,
+      "z": 29,
+      "height": 6.5,
+      "shape": "onion",
+      "color": "#e2b23b",
+      "segments": 12
+    },
+    {
+      "type": "sign",
+      "kind": "cross",
+      "at": [9.5, 9.5, 35.5],
+      "size": 3.5
+    },
+    {
+      "type": "cylinder",
+      "center": [-9.5, 9.5],
+      "radius": 3.2,
+      "z": [22, 29],
+      "color": "#f7f4ee",
+      "facade": "arches",
+      "floor": 6,
+      "segments": 12
+    },
+    {
+      "type": "dome",
+      "center": [-9.5, 9.5],
+      "radius": 3.4,
+      "z": 29,
+      "height": 6.5,
+      "shape": "onion",
+      "color": "#e2b23b",
+      "segments": 12
+    },
+    {
+      "type": "sign",
+      "kind": "cross",
+      "at": [-9.5, 9.5, 35.5],
+      "size": 3.5
+    },
+    {
+      "type": "cylinder",
+      "center": [0, 0],
+      "radius": 6.5,
+      "z": [22, 36],
+      "color": "#f7f4ee",
+      "facade": "arches",
+      "floor": 7,
+      "segments": 16
+    },
+    {
+      "type": "dome",
+      "center": [0, 0],
+      "radius": 7,
+      "z": 36,
+      "height": 13,
+      "shape": "onion",
+      "color": "#e2b23b",
+      "segments": 16
+    },
+    {
+      "type": "sign",
+      "kind": "cross",
+      "at": [0, 0, 49],
+      "size": 6
+    }
+  ]
+}

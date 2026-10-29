@@ -1,0 +1,358 @@
+{
+  "type": "FeatureCollection",
+  "name": "districts",
+  "description": "Подписи жилых районов (видны на мелком масштабе)",
+  "source": "© участники OpenStreetMap, ODbL. Сгенерировано scripts/map/osm_tool.py",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Автовокзал"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.61139, 56.80835]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Академический"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.51564, 56.78047]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Аппаратный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.67173, 56.87087]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ботанический"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.62475, 56.79162]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "ВИЗ"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.55263, 56.8316]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Вокзальный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.58889, 56.85691]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Вторчермет"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.59917, 56.76558]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Втузгородок"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.64931, 56.84351]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Елизавет"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.62113, 56.7556]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "ЖБИ"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.68021, 56.83527]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Завокзальный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.58382, 56.86695]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Заречный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.5672, 56.85249]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Изоплит"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.7385, 56.87389]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Калиновский"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.72265, 56.90517]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Лечебный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.72943, 56.79642]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Лиственный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.48783, 56.80584]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Нижнеисетский"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.67811, 56.75007]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Новоберёзовский"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.74344, 56.89572]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Парковый"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.6305, 56.81975]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Пионерский"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.63457, 56.85658]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Птицефабрика"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.735, 56.78477]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Семь Ключей"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.48676, 56.88837]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Синие Камни"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.67345, 56.82644]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Солнечный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.56504, 56.74642]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Сосновый бор"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.67159, 56.78482]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Станция Путёвка"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.69879, 56.81468]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Старая Сортировка"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.5286, 56.8724]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "УНЦ"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.55078, 56.76846]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Уктус"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.64438, 56.78088]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Уралмаш"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.59068, 56.88953]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Чапаевский"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.71636, 56.80764]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Шарташский"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.71548, 56.8815]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Широкая Речка"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.49243, 56.79831]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Эльмаш"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.63285, 56.89353]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Юго-Западный"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [60.56502, 56.81001]
+      }
+    }
+  ]
+}

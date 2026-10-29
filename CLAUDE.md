@@ -6,5 +6,7 @@
   состояние только JSON-совместимое, изменения только через `applyAction`.
 - `public/prototype/` — исходный прототип, не править (кроме осознанных исправлений).
 - Принятые решения записывать в `docs/QUESTIONS.md` → «Решения».
+- Карта — `docs/MAP.md`. В `src/map/data/` объекты и модели правятся вручную, а `layers/*`
+  генерируются `scripts/map/osm_tool.py` из выгрузки OSM (не править руками — перезапишутся).
 - Одна ветка `main`; каждый push в неё публикуется на https://alexkof.github.io/ekbgame/
   (`.github/workflows/deploy.yml`).
