@@ -1,0 +1,20 @@
+{
+  "id": "city-hall-sprite",
+  "name": "Мэрия — запечённый спрайт",
+  "source": "Рендер варианта «фото-кит» 8 px/м, сглаживание и цветокоррекция (scratchpad stylize.py).",
+  "parts": [
+    {
+      "type": "image",
+      "image": "city-hall/sprite-painted.webp",
+      "origin": [496, 533.6],
+      "ppm": 8,
+      "footprint": [
+        [-57.0, -21.6],
+        [61.8, 1.2],
+        [57.8, 21.8],
+        [-61.0, -1.0]
+      ],
+      "height": 27
+    }
+  ]
+}

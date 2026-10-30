@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Лаборатория моделей — мэрия</title>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        color: #1d1d1f;
+        background: #f4f1ea;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+      }
+      h2 {
+        margin: 28px 0 8px;
+        font-size: 17px;
+      }
+      p.lead {
+        margin: 0 0 12px;
+        color: #5b574f;
+        max-width: 860px;
+      }
+      .controls {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 8px 0;
+      }
+      .controls button {
+        border: 1px solid #cfc6b4;
+        background: #fff;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .controls button.active {
+        background: #1d1d1f;
+        color: #fff;
+        border-color: #1d1d1f;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 12px;
+      }
+      .tile {
+        background: #fff;
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .tile canvas {
+        width: 100%;
+        display: block;
+        border-radius: 8px;
+      }
+      .tile b {
+        display: block;
+        margin: 6px 0 2px;
+      }
+      .tile small {
+        color: #6b665c;
+      }
+      #map {
+        position: relative;
+        height: 560px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #cdd6c3;
+      }
+      .map-canvas {
+        display: block;
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Лаборатория моделей: мэрия</h1>
+    <p class="lead">
+      Один и тот же объект, сделанный разными способами. Все варианты рисуются движком карты в её
+      проекции и подставляются на участок через тот же механизм замены моделей.
+    </p>
+
+    <h2>Варианты крупным планом</h2>
+    <div class="controls" id="scales"></div>
+    <div class="grid" id="tiles"></div>
+
+    <h2>На карте</h2>
+    <div class="controls" id="variants"></div>
+    <div class="controls" id="zooms"></div>
+    <div id="map"></div>
+
+    <h2>Каркас для художника или генератора изображений</h2>
+    <p class="lead">
+      Модель в тех же пикселях, что и будущий спрайт: «глина», нормали, контуры. Рисунок поверх
+      каркаса ложится на карту без подгонки — точка привязки и масштаб записаны в JSON.
+    </p>
+    <div class="controls" id="guideModels"></div>
+    <div class="grid" id="guides"></div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

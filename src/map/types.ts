@@ -123,9 +123,48 @@ export interface ModelData {
   parts: ModelPart[];
 }
 
-export type ModelPart = PrismPart | CylinderPart | DomePart | GroundPart | TreesPart | SignPart;
+export type ModelPart =
+  | PrismPart
+  | CylinderPart
+  | DomePart
+  | GroundPart
+  | TreesPart
+  | SignPart
+  | BillboardPart
+  | ImagePart;
 
-export type Facade = 'none' | 'grid' | 'glass' | 'arches' | 'columns' | 'ribbon';
+export type Facade =
+  'none' | 'grid' | 'glass' | 'arches' | 'columns' | 'ribbon' | 'bays' | 'balusters';
+
+/**
+ * Цвета фасада «bays» (сталинский ордер): цоколь, опоры-пилястры, заполнение между опорами,
+ * переплёты окон. Остальные фасады берут цвет из color.
+ */
+export interface BaysStyle {
+  /** Ширина пролёта между опорами, м. */
+  bay: number;
+  /** Окон в пролёте. */
+  windows: number;
+  pier: string;
+  panel: string;
+  plinth: string;
+  frame: string;
+  /** Высота цоколя (м от низа стены) и верхнего фризового этажа (м от верха). */
+  plinthHeight: number;
+  friezeHeight: number;
+}
+
+/** Картинка, натянутая на стену (выпрямленный фасад с фото, рисунок, плитка-пролёт). */
+export interface Skin {
+  /** Имя файла относительно папки моделей, например "city-hall/facade.png". */
+  image: string;
+  /** Какую стену покрыть: самую длинную из обращённых в эту сторону света. */
+  side: 'south' | 'north' | 'east' | 'west';
+  /** Отметки низа и верха картинки, м (по умолчанию — вся стена). */
+  z?: [number, number];
+  /** Повторять картинку каждые repeat метров (плитка); по умолчанию растянуть на стену. */
+  repeat?: number;
+}
 
 interface SolidBase {
   /** Нижняя и верхняя отметки в метрах. */
@@ -136,6 +175,8 @@ interface SolidBase {
   facade?: Facade;
   /** Высота этажа для рисования окон, м (по умолчанию 3,6). */
   floor?: number;
+  /** Параметры фасада «bays». */
+  bays?: Partial<BaysStyle>;
 }
 
 /** Призма по контуру (здание, стилобат, плотина). */
@@ -144,6 +185,10 @@ export interface PrismPart extends SolidBase {
   outline: XY[];
   /** Скатная крыша: высота конька над z[1] (шатёр к центру контура). */
   pyramid?: number;
+  /** Вальмовая крыша над четырёхугольником: высота конька над z[1], конёк вдоль длинной стороны. */
+  hip?: number;
+  /** Картинки на стенах вместо нарисованного фасада. */
+  skins?: Skin[];
 }
 
 /** Цилиндр/эллипс/конус (башни, шпили, барабаны). */
@@ -188,10 +233,40 @@ export interface TreesPart {
 /** Значок в пространстве: буква «М» метро, крест, звезда, флаг, вывеска. */
 export interface SignPart {
   type: 'sign';
-  kind: 'metro' | 'cross' | 'star' | 'flag' | 'text';
+  kind: 'metro' | 'cross' | 'star' | 'flag' | 'text' | 'clock' | 'statue';
   at: [number, number, number];
   /** Размер в метрах. */
   size: number;
   text?: string;
   color?: string;
+}
+
+/**
+ * Билборд: картинка в вертикальной плоскости «запад — восток», обращённой к зрителю.
+ * Камера не вращается, поэтому симметричные башни, шпили, статуи, деревья так выглядят
+ * объёмными — это классический приём 2,5D-игр.
+ */
+export interface BillboardPart {
+  type: 'billboard';
+  image: string;
+  /** Точка на земле под центром картинки, м. */
+  center: XY;
+  /** Ширина картинки, м. */
+  width: number;
+  /** Отметки низа и верха картинки, м. */
+  z: [number, number];
+}
+
+/**
+ * Готовый спрайт: картинка, нарисованная (художником, ИИ или запеканием) уже в проекции карты.
+ * origin — пиксель картинки, где начало координат модели; ppm — пикселей на метр.
+ * footprint и height нужны только для тени и выбора детализации.
+ */
+export interface ImagePart {
+  type: 'image';
+  image: string;
+  origin: [number, number];
+  ppm: number;
+  footprint?: XY[];
+  height?: number;
 }

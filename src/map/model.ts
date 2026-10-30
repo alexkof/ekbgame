@@ -1,4 +1,15 @@
-import type { Facade, ModelData, ModelPart, SignPart, XY } from './types';
+import { getImage } from './images';
+import type {
+  BaysStyle,
+  BillboardPart,
+  Facade,
+  ImagePart,
+  ModelData,
+  ModelPart,
+  SignPart,
+  Skin,
+  XY,
+} from './types';
 
 /**
  * Модели объектов: из примитивов (призмы, цилиндры, купола, деревья, значки) собирается
@@ -28,6 +39,9 @@ interface Face {
   fill: string;
   edge: string;
   depth: number;
+  /** Нормаль и освещённость (0…1) — для режимов «глина» и «нормали». */
+  n: V3;
+  k: number;
   wall?: Wall;
   gradient?: [string, string];
 }
@@ -39,6 +53,18 @@ interface Wall {
   facade: Facade;
   floor: number;
   base: RGB;
+  bays?: BaysStyle;
+  skin?: Skin;
+}
+interface BillboardItem {
+  kind: 'billboard';
+  part: BillboardPart;
+  depth: number;
+}
+interface ImageItem {
+  kind: 'image';
+  part: ImagePart;
+  depth: number;
 }
 interface TreeItem {
   kind: 'tree';
@@ -54,7 +80,14 @@ interface SignItem {
   pos: V3;
   depth: number;
 }
-type Item = Face | TreeItem | SignItem;
+type Item = Face | TreeItem | SignItem | BillboardItem | ImageItem;
+
+/**
+ * Как рисовать модель: color — обычный вид; clay — «глина» без цвета и деталей;
+ * normals — карта нормалей; lines — контуры. Последние три — подсказки (каркас) для
+ * художника или генератора изображений: рисунок поверх них ляжет точно в проекцию карты.
+ */
+export type RenderMode = 'color' | 'clay' | 'normals' | 'lines';
 
 interface Group {
   depth: number;
@@ -164,6 +197,68 @@ function centroid(o: XY[]): XY {
   return [x / o.length, y / o.length];
 }
 
+const DEFAULT_BAYS: BaysStyle = {
+  bay: 8,
+  windows: 3,
+  pier: '#8f9188',
+  panel: '#c9714a',
+  plinth: '#7d7f78',
+  frame: '#f4f1e8',
+  plinthHeight: 5.5,
+  friezeHeight: 3.5,
+};
+
+const SIDES: Record<Skin['side'], XY> = {
+  south: [0, -1],
+  north: [0, 1],
+  east: [1, 0],
+  west: [-1, 0],
+};
+
+/** Какой стене какая картинка: самая длинная из стен, обращённых в нужную сторону (±45°). */
+function skinsByEdge(ring: XY[], skins: Skin[]): Map<number, Skin> {
+  const out = new Map<number, Skin>();
+  for (const skin of skins) {
+    const [sx, sy] = SIDES[skin.side];
+    let best = -1;
+    let bestLen = 0;
+    ring.forEach((p, i) => {
+      const q = ring[(i + 1) % ring.length]!;
+      const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      // Внешняя нормаль ребра контура против часовой стрелки — справа от направления обхода.
+      const nx = (q[1] - p[1]) / len;
+      const ny = -(q[0] - p[0]) / len;
+      if (nx * sx + ny * sy > Math.SQRT1_2 && len > bestLen) {
+        best = i;
+        bestLen = len;
+      }
+    });
+    if (best >= 0) out.set(best, skin);
+  }
+  return out;
+}
+
+/** Скаты вальмовой крыши над четырёхугольником (против часовой): две трапеции и два треугольника. */
+function hipRoof(o: XY[], Z0: number, Z1: number): V3[][] {
+  const d = (p: XY, q: XY) => Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const [A, B, C, D] = d(o[0]!, o[1]!) >= d(o[1]!, o[2]!) ? o : [o[1]!, o[2]!, o[3]!, o[0]!];
+  const len = d(A!, B!);
+  const half = Math.min(len, d(B!, C!)) / 2;
+  const ux = (B![0] - A![0]) / len;
+  const uy = (B![1] - A![1]) / len;
+  const m1: XY = [(A![0] + D![0]) / 2, (A![1] + D![1]) / 2];
+  const m2: XY = [(B![0] + C![0]) / 2, (B![1] + C![1]) / 2];
+  const r1: V3 = [m1[0] + ux * half, m1[1] + uy * half, Z1];
+  const r2: V3 = [m2[0] - ux * half, m2[1] - uy * half, Z1];
+  const at = (p: XY): V3 => [p[0], p[1], Z0];
+  return [
+    [at(A!), at(B!), r2, r1],
+    [at(B!), at(C!), r2],
+    [at(C!), at(D!), r1, r2],
+    [at(D!), at(A!), r1],
+  ];
+}
+
 // --------------------------------------------------------------- сборка
 
 export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
@@ -178,6 +273,7 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
   const H = view.height;
 
   const groups: Group[] = [];
+  const imageBox = { u0: Infinity, u1: -Infinity, v0: Infinity, v1: -Infinity };
   const ground: CompiledModel['ground'] = [];
   const footprints: Footprint[] = [];
   let topZ = 0;
@@ -203,6 +299,8 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
       fill: rgb(base, k),
       edge: rgb(base, k * 0.86),
       depth: depthOf([c[0] / pts.length, c[1] / pts.length, c[2] / pts.length]),
+      n,
+      k,
     };
     if (opts.wall) face.wall = opts.wall;
     return face;
@@ -216,13 +314,19 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
     facade: Facade,
     floor: number,
     items: Item[],
+    extra: { bays?: BaysStyle; skins?: Skin[] } = {},
   ) => {
     const Z0 = H(z0);
     const Z1 = H(z1);
     const walls: Face[] = [];
+    const skinOf = skinsByEdge(ring, extra.skins ?? []);
     for (let i = 0; i < ring.length; i++) {
       const p = ring[i]!;
       const q = ring[(i + 1) % ring.length]!;
+      const wall: Wall = { p0: p, p1: q, z0, z1, facade, floor, base };
+      if (extra.bays) wall.bays = extra.bays;
+      const skin = skinOf.get(i);
+      if (skin) wall.skin = skin;
       const f = faceFrom(
         [
           [p[0], p[1], Z0],
@@ -231,7 +335,7 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
           [p[0], p[1], Z1],
         ],
         base,
-        { wall: { p0: p, p1: q, z0, z1, facade, floor, base } },
+        { wall },
       );
       if (f) {
         if (facade === 'glass') f.gradient = [rgb(base, 1.18), rgb(base, 0.78)];
@@ -257,7 +361,10 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
         const base = parseColor(part.color);
         const roof = part.roof ? parseColor(part.roof) : mix(base, [255, 255, 255], 0.12);
         const [z0, z1] = part.z;
-        addSolidWalls(o, z0, z1, base, part.facade ?? 'grid', part.floor ?? 3.6, items);
+        const extra: { bays?: BaysStyle; skins?: Skin[] } = {};
+        if (part.facade === 'bays') extra.bays = { ...DEFAULT_BAYS, ...part.bays };
+        if (part.skins) extra.skins = part.skins;
+        addSolidWalls(o, z0, z1, base, part.facade ?? 'grid', part.floor ?? 3.6, items, extra);
         const c = centroid(o);
         if (part.pyramid) {
           const apex: V3 = [c[0], c[1], H(z1 + part.pyramid)];
@@ -271,6 +378,13 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
           tris.sort((a, b) => a.depth - b.depth);
           items.push(...tris);
           topZ = Math.max(topZ, apex[2]);
+        } else if (part.hip && o.length === 4) {
+          const slopes = hipRoof(o, H(z1), H(z1 + part.hip))
+            .map((pts) => faceFrom(pts, roof))
+            .filter((f): f is Face => f !== null)
+            .sort((a, b) => a.depth - b.depth);
+          items.push(...slopes);
+          topZ = Math.max(topZ, H(z1 + part.hip));
         } else {
           const top = faceFrom(
             o.map((p) => [p[0], p[1], H(z1)] as V3),
@@ -304,7 +418,17 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
         const [z0, z1] = part.z;
         const bottom = ring(1);
         if (topK === 1) {
-          addSolidWalls(bottom, z0, z1, base, part.facade ?? 'none', part.floor ?? 3.6, items);
+          const extra = part.facade === 'bays' ? { bays: { ...DEFAULT_BAYS, ...part.bays } } : {};
+          addSolidWalls(
+            bottom,
+            z0,
+            z1,
+            base,
+            part.facade ?? 'none',
+            part.floor ?? 3.6,
+            items,
+            extra,
+          );
         } else {
           const top = ring(topK);
           const sides: Face[] = [];
@@ -421,6 +545,35 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
         anchor = pos;
         break;
       }
+      case 'billboard': {
+        anchor = [part.center[0], part.center[1], H(part.z[0])];
+        items.push({ kind: 'billboard', part, depth: depthOf(anchor) });
+        topZ = Math.max(topZ, H(part.z[1]));
+        extend(part.center[0] - part.width / 2, part.center[1]);
+        extend(part.center[0] + part.width / 2, part.center[1]);
+        break;
+      }
+      case 'image': {
+        items.push({ kind: 'image', part, depth: 0 });
+        if (part.footprint) {
+          const o = ccw(part.footprint);
+          footprints.push({ outline: o, height: part.height ?? 10 });
+          o.forEach((p) => extend(p[0], p[1]));
+        }
+        topZ = Math.max(topZ, H(part.height ?? 0));
+        // Размер картинки (в метрах) — прямо в плоскости изображения.
+        const img = getImage(part.image);
+        if (img) {
+          const [ox, oy] = part.origin;
+          imageBox.u0 = Math.min(imageBox.u0, -ox / part.ppm);
+          imageBox.u1 = Math.max(imageBox.u1, (img.naturalWidth - ox) / part.ppm);
+          imageBox.v0 = Math.min(imageBox.v0, -oy / part.ppm);
+          imageBox.v1 = Math.max(imageBox.v1, (img.naturalHeight - oy) / part.ppm);
+          // Верх картинки над точкой привязки — туда ставится подпись.
+          topZ = Math.max(topZ, oy / part.ppm / view.c);
+        }
+        break;
+      }
     }
     groups.push({ depth: depthOf(anchor), order, items });
   });
@@ -433,10 +586,10 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
   const size = Math.max(maxX - minX, maxY - minY);
 
   // Габарит в плоскости изображения (на 1 px/м) — для размера спрайта.
-  const u0 = minX;
-  const u1 = maxX + view.a * topZ;
-  const v0 = -view.t * maxY - view.c * topZ;
-  const v1 = -view.t * minY;
+  const u0 = Math.min(minX, imageBox.u0);
+  const u1 = Math.max(maxX + view.a * topZ, imageBox.u1);
+  const v0 = Math.min(-view.t * maxY - view.c * topZ, imageBox.v0);
+  const v1 = Math.max(-view.t * minY, imageBox.v1);
   return {
     id: data.id,
     name: data.name,
@@ -457,12 +610,16 @@ export function drawModel(
   m: CompiledModel,
   view: ViewParams,
   ps: number,
+  mode: RenderMode = 'color',
 ) {
   const pu = (p: V3) => (p[0] + view.a * p[2]) * ps;
   const pv = (p: V3) => (-view.t * p[1] - view.c * p[2]) * ps;
   ctx.lineJoin = 'round';
+  ctx.imageSmoothingQuality = 'high';
+  const r: RenderCtx = { ctx, view, ps, pu, pv, mode, normal: normalColor(view) };
 
   for (const g of m.ground) {
+    if (mode === 'lines') continue;
     ctx.beginPath();
     g.pts.forEach((p, i) => {
       const u = p[0] * ps;
@@ -471,34 +628,81 @@ export function drawModel(
       else ctx.lineTo(u, v);
     });
     ctx.closePath();
-    ctx.fillStyle = g.color;
+    ctx.fillStyle = mode === 'color' ? g.color : mode === 'clay' ? '#d9d9d9' : r.normal([0, 0, 1]);
     ctx.fill();
   }
 
   for (const g of m.groups) {
     for (const it of g.items) {
-      if (it.kind === 'face') drawFace(ctx, it, view, ps, pu, pv);
-      else if (it.kind === 'tree')
-        drawTree(ctx, it.x * ps, -view.t * it.y * ps, it.r * ps, view, it.variant);
-      else drawSign(ctx, it, view, ps, pu, pv);
+      if (it.kind === 'face') drawFace(r, it);
+      else if (it.kind === 'tree') {
+        const x = it.x * ps;
+        const y = -view.t * it.y * ps;
+        if (mode === 'color') drawTree(ctx, x, y, it.r * ps, view, it.variant);
+        else
+          drawGuideBlob(
+            r,
+            x + it.r * ps * 0.9 * view.a,
+            y - it.r * ps * (0.9 * view.c + 0.55),
+            it.r * ps,
+          );
+      } else if (it.kind === 'billboard') drawBillboard(r, it.part);
+      else if (it.kind === 'image') {
+        if (mode === 'color') drawImagePart(r, it.part);
+      } else if (mode === 'color' || mode === 'clay') drawSign(ctx, it, view, ps, pu, pv);
     }
   }
 }
 
-function drawFace(
-  ctx: CanvasRenderingContext2D,
-  f: Face,
-  view: ViewParams,
-  ps: number,
-  pu: (p: V3) => number,
-  pv: (p: V3) => number,
-) {
+interface RenderCtx {
+  ctx: CanvasRenderingContext2D;
+  view: ViewParams;
+  ps: number;
+  pu: (p: V3) => number;
+  pv: (p: V3) => number;
+  mode: RenderMode;
+  normal: (n: V3) => string;
+}
+
+/**
+ * Нормаль в цвет, как в картах нормалей: R — вправо по экрану, G — вверх, B — к зрителю.
+ * Базис строится от направления взгляда косоугольной проекции.
+ */
+function normalColor(view: ViewParams): (n: V3) => string {
+  const B = normalize([-view.a, -view.c / view.t, 1]);
+  const e = B[0];
+  const R = normalize([1 - e * B[0], -e * B[1], -e * B[2]]);
+  const G: V3 = [B[1] * R[2] - B[2] * R[1], B[2] * R[0] - B[0] * R[2], B[0] * R[1] - B[1] * R[0]];
+  const ch = (v: number) => Math.round(((v + 1) / 2) * 255);
+  return (n) => `rgb(${ch(dot(n, R))},${ch(dot(n, G))},${ch(dot(n, B))})`;
+}
+
+function facePath(r: RenderCtx, f: Face) {
+  const { ctx, pu, pv } = r;
   ctx.beginPath();
   f.pts.forEach((p, i) => {
     if (i === 0) ctx.moveTo(pu(p), pv(p));
     else ctx.lineTo(pu(p), pv(p));
   });
   ctx.closePath();
+}
+
+function drawFace(r: RenderCtx, f: Face) {
+  const { ctx, view, ps, pu, pv } = r;
+  facePath(r, f);
+  if (r.mode !== 'color') {
+    ctx.fillStyle =
+      r.mode === 'clay'
+        ? rgb([224, 224, 224], f.k)
+        : r.mode === 'normals'
+          ? r.normal(f.n)
+          : '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = r.mode === 'lines' ? '#000000' : (ctx.fillStyle as string);
+    ctx.lineWidth = r.mode === 'lines' ? Math.max(1, ps * 0.12) : 0.8;
+    ctx.stroke();
+    return;
+  }
   if (f.gradient) {
     const top = Math.min(...f.pts.map(pv));
     const bottom = Math.max(...f.pts.map(pv));
@@ -510,10 +714,314 @@ function drawFace(
     ctx.fillStyle = f.fill;
   }
   ctx.fill();
+  const skin = f.wall?.skin && getImage(f.wall.skin.image);
+  if (f.wall?.skin && skin) drawSkin(r, f, f.wall, f.wall.skin, skin);
+  else if (f.wall?.facade === 'bays') drawBays(r, f, f.wall);
+  else if (f.wall?.facade === 'balusters') drawBalusters(r, f, f.wall);
   ctx.strokeStyle = f.edge;
   ctx.lineWidth = Math.max(0.6, ps * 0.25);
   ctx.stroke();
-  if (f.wall && f.wall.facade !== 'none') drawFacade(ctx, f, f.wall, view, ps, pu, pv);
+  if (f.wall && !f.wall.skin && !['none', 'bays', 'balusters'].includes(f.wall.facade))
+    drawFacade(ctx, f, f.wall, view, ps, pu, pv);
+}
+
+// ------------------------------------------------- картинки на моделях
+
+/** Освещённость южной стены: фото фасада считаем снятым при таком свете. */
+const SKIN_REF_LIGHT = AMBIENT + DIFFUSE * Math.max(0, dot([0, -1, 0], LIGHT));
+
+type Picture = HTMLImageElement | HTMLCanvasElement;
+
+const zSpace = new WeakMap<Picture, Map<string, Picture>>();
+
+function sizeOf(p: Picture): [number, number] {
+  return p instanceof HTMLImageElement ? [p.naturalWidth, p.naturalHeight] : [p.width, p.height];
+}
+
+/**
+ * Картинка, пересчитанная по вертикали в «экранные» высоты Z = H(z). Выше linearUpTo
+ * высоты сжимаются нелинейно; после пересчёта картинку можно класть одним аффинным
+ * преобразованием — для косоугольной проекции это точно.
+ */
+function inZSpace(img: Picture, z0: number, z1: number, H: (z: number) => number): Picture {
+  let cache = zSpace.get(img);
+  if (!cache) zSpace.set(img, (cache = new Map()));
+  const key = `${z0}|${z1}`;
+  let out = cache.get(key);
+  if (out) return out;
+  const Z0 = H(z0);
+  const Z1 = H(z1);
+  const lin = (z: number) => Z0 + ((z - z0) / (z1 - z0)) * (Z1 - Z0);
+  if (Math.abs(H((z0 + z1) / 2) - lin((z0 + z1) / 2)) < 0.01 * (Z1 - Z0)) {
+    cache.set(key, img);
+    return img;
+  }
+  const [w, h] = sizeOf(img);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d')!;
+  for (let row = 0; row < h; row++) {
+    const Z = Z1 - ((row + 0.5) / h) * (Z1 - Z0);
+    let lo = z0;
+    let hi = z1;
+    for (let i = 0; i < 30; i++) {
+      const mid = (lo + hi) / 2;
+      if (H(mid) < Z) lo = mid;
+      else hi = mid;
+    }
+    const src = Math.min(h - 1, Math.max(0, ((z1 - lo) / (z1 - z0)) * h - 0.5));
+    c.drawImage(img, 0, src, w, 1, 0, row, w, 1);
+  }
+  cache.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * Кладёт картинку на вертикальную плоскость: от точки p0 по направлению d на длину len,
+ * по высоте от z0 до z1. tile — ширина одного повтора в метрах.
+ */
+function drawPlaneImage(
+  r: RenderCtx,
+  img: Picture,
+  p0: XY,
+  d: XY,
+  len: number,
+  z0: number,
+  z1: number,
+  tile: number,
+) {
+  const { ctx, view, ps } = r;
+  const tex = inZSpace(img, z0, z1, view.height);
+  const [w, h] = sizeOf(img);
+  const Z0 = view.height(z0);
+  const Z1 = view.height(z1);
+  const n = Math.max(1, Math.ceil(len / tile - 1e-6));
+  for (let k = 0; k < n; k++) {
+    const s0 = k * tile;
+    ctx.save();
+    ctx.transform(
+      (ps * d[0] * tile) / w,
+      (-ps * view.t * d[1] * tile) / w,
+      (-ps * view.a * (Z1 - Z0)) / h,
+      (ps * view.c * (Z1 - Z0)) / h,
+      ps * (p0[0] + d[0] * s0 + view.a * Z1),
+      ps * (-view.t * (p0[1] + d[1] * s0) - view.c * Z1),
+    );
+    ctx.drawImage(tex, 0, 0);
+    ctx.restore();
+  }
+}
+
+function drawSkin(r: RenderCtx, f: Face, w: Wall, skin: Skin, img: HTMLImageElement) {
+  const { ctx } = r;
+  const len = Math.hypot(w.p1[0] - w.p0[0], w.p1[1] - w.p0[1]);
+  const d: XY = [(w.p1[0] - w.p0[0]) / len, (w.p1[1] - w.p0[1]) / len];
+  const [z0, z1] = skin.z ?? [w.z0, w.z1];
+  ctx.save();
+  facePath(r, f);
+  ctx.clip();
+  drawPlaneImage(r, img, w.p0, d, len, z0, z1, skin.repeat ?? len);
+  // Своё освещение у фото уже есть; стены в тени только притемняем.
+  const dark = 1 - f.k / SKIN_REF_LIGHT;
+  if (dark > 0.02) {
+    ctx.fillStyle = `rgba(20,24,40,${Math.min(0.6, dark).toFixed(3)})`;
+    ctx.fill();
+  }
+  ctx.restore();
+  facePath(r, f);
+}
+
+const silhouettes = new WeakMap<HTMLImageElement, Map<string, HTMLCanvasElement>>();
+
+/** Силуэт картинки одним цветом — для режимов-подсказок. */
+function silhouette(img: HTMLImageElement, color: string): HTMLCanvasElement {
+  let cache = silhouettes.get(img);
+  if (!cache) silhouettes.set(img, (cache = new Map()));
+  let c = cache.get(color);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const x = c.getContext('2d')!;
+  x.drawImage(img, 0, 0);
+  x.globalCompositeOperation = 'source-in';
+  x.fillStyle = color;
+  x.fillRect(0, 0, c.width, c.height);
+  cache.set(color, c);
+  return c;
+}
+
+function drawBillboard(r: RenderCtx, p: BillboardPart) {
+  const img = getImage(p.image);
+  if (!img) return;
+  const p0: XY = [p.center[0] - p.width / 2, p.center[1]];
+  if (r.mode === 'color') {
+    drawPlaneImage(r, img, p0, [1, 0], p.width, p.z[0], p.z[1], p.width);
+    return;
+  }
+  const color =
+    r.mode === 'clay' ? '#c8c8c8' : r.mode === 'normals' ? r.normal([0, -1, 0]) : '#000';
+  drawPlaneImage(r, silhouette(img, color), p0, [1, 0], p.width, p.z[0], p.z[1], p.width);
+}
+
+function drawImagePart(r: RenderCtx, p: ImagePart) {
+  const img = getImage(p.image);
+  if (!img) return;
+  const k = r.ps / p.ppm;
+  r.ctx.drawImage(
+    img,
+    -p.origin[0] * k,
+    -p.origin[1] * k,
+    img.naturalWidth * k,
+    img.naturalHeight * k,
+  );
+}
+
+function drawGuideBlob(r: RenderCtx, x: number, y: number, rad: number) {
+  const { ctx } = r;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rad, rad * 0.92, 0, 0, Math.PI * 2);
+  if (r.mode === 'lines') {
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = r.mode === 'clay' ? '#b8b8b8' : r.normal([0, -0.3, 0.95]);
+    ctx.fill();
+  }
+}
+
+// ------------------------------------------- фасады «bays» и «balusters»
+
+/** Четырёхугольник на стене: s — вдоль стены, z — высота, м. */
+function wallQuad(r: RenderCtx, w: Wall) {
+  const { ctx, view, pu, pv } = r;
+  const len = Math.hypot(w.p1[0] - w.p0[0], w.p1[1] - w.p0[1]);
+  const dx = (w.p1[0] - w.p0[0]) / len;
+  const dy = (w.p1[1] - w.p0[1]) / len;
+  const at = (s: number, z: number): V3 => [w.p0[0] + dx * s, w.p0[1] + dy * s, view.height(z)];
+  return {
+    len,
+    quad(s0: number, s1: number, z0: number, z1: number) {
+      const a = at(s0, z0);
+      const b = at(s1, z0);
+      const c = at(s1, z1);
+      const d = at(s0, z1);
+      ctx.moveTo(pu(a), pv(a));
+      ctx.lineTo(pu(b), pv(b));
+      ctx.lineTo(pu(c), pv(c));
+      ctx.lineTo(pu(d), pv(d));
+      ctx.closePath();
+    },
+  };
+}
+
+/**
+ * Сталинский ордерный фасад: цоколь, опоры-пилястры с капителями, цветное заполнение
+ * между ними, окна с белыми переплётами, фризовый этаж и тень под карнизом. Цвет
+ * заполнения виден при любом масштабе; окна — когда пролёт крупнее нескольких пикселей.
+ */
+function drawBays(r: RenderCtx, f: Face, w: Wall) {
+  const { ctx, ps, view } = r;
+  const b = w.bays!;
+  const { len, quad } = wallQuad(r, w);
+  const height = w.z1 - w.z0;
+  if (len < 1 || height < 1) return;
+  const k = f.k;
+  const col = (hex: string, kk = k) => rgb(parseColor(hex), kk);
+  const nb = Math.max(1, Math.round(len / b.bay));
+  const step = len / nb;
+  const pierW = Math.min(step * 0.22, 2);
+  const zA = w.z0 + Math.min(b.plinthHeight, height * 0.3);
+  const zB = w.z1 - Math.min(b.friezeHeight, height * 0.3);
+  const fill = (color: string, draw: () => void) => {
+    ctx.beginPath();
+    draw();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  ctx.save();
+  facePath(r, f);
+  ctx.clip();
+  fill(col(b.plinth), () => quad(0, len, w.z0, zA));
+  fill(col(b.panel), () => {
+    for (let i = 0; i < nb; i++) quad(i * step + pierW / 2, (i + 1) * step - pierW / 2, zA, zB);
+  });
+  fill('rgba(255,255,255,0.28)', () => quad(0, len, zA, zA + 0.4));
+  fill('rgba(30,25,20,0.22)', () => quad(0, len, w.z1 - 0.9, w.z1 - 0.2));
+  const winPx = ((step - pierW) / b.windows) * ps;
+  if (winPx >= 2.4 && w.floor * ps * view.c >= 2.4) {
+    // Капители опор
+    fill(col('#d8d2c2'), () => {
+      for (let i = 0; i <= nb; i++) {
+        const s = Math.min(len, Math.max(0, i * step));
+        quad(Math.max(0, s - pierW * 0.6), Math.min(len, s + pierW * 0.6), zB - 0.9, zB);
+      }
+    });
+    const slot = (step - pierW) / b.windows;
+    const wins: [number, number, number, number][] = [];
+    const rows = (z0: number, z1: number, fill: number) => {
+      const n = Math.max(1, Math.round((z1 - z0) / w.floor));
+      const fh = (z1 - z0) / n;
+      for (let fl = 0; fl < n; fl++) {
+        const zb = z0 + fl * fh + fh * (1 - fill) * 0.55;
+        for (let i = 0; i < nb; i++)
+          for (let j = 0; j < b.windows; j++) {
+            const sc = i * step + pierW / 2 + (j + 0.5) * slot;
+            wins.push([sc - slot * 0.27, sc + slot * 0.27, zb, zb + fh * fill]);
+          }
+      }
+    };
+    rows(zA, zB, 0.58);
+    rows(w.z0, zA, 0.45);
+    rows(zB, w.z1 - 0.9, 0.5);
+    const fr = 0.18;
+    fill(col(b.frame, Math.min(1, k * 1.08)), () => {
+      for (const [s0, s1, z0, z1] of wins) quad(s0 - fr, s1 + fr, z0 - fr, z1 + fr);
+    });
+    fill(rgb([44, 58, 76], 0.9 + 0.2 * k), () => {
+      for (const [s0, s1, z0, z1] of wins) quad(s0, s1, z0, z1);
+    });
+    if (slot * ps > 9) {
+      // Переплёты
+      fill(col(b.frame, Math.min(1, k * 1.08)), () => {
+        for (const [s0, s1, z0, z1] of wins) {
+          const sm = (s0 + s1) / 2;
+          quad(sm - fr / 2, sm + fr / 2, z0, z1);
+          const zm = z0 + (z1 - z0) * 0.62;
+          quad(s0, s1, zm - fr / 2, zm + fr / 2);
+        }
+      });
+    }
+  }
+  ctx.restore();
+  facePath(r, f);
+}
+
+/** Балюстрада: перила, тумбы и тени между балясинами. */
+function drawBalusters(r: RenderCtx, f: Face, w: Wall) {
+  const { ctx, ps } = r;
+  const { len, quad } = wallQuad(r, w);
+  const h = w.z1 - w.z0;
+  ctx.save();
+  facePath(r, f);
+  ctx.clip();
+  ctx.beginPath();
+  quad(0, len, w.z1 - h * 0.22, w.z1);
+  quad(0, len, w.z0, w.z0 + h * 0.15);
+  ctx.fillStyle = rgb([255, 255, 255], 0.9 + f.k * 0.1, 0.35);
+  ctx.fill();
+  if (0.5 * ps >= 2) {
+    ctx.beginPath();
+    for (let s = 0.3; s < len - 0.2; s += 0.5) quad(s, s + 0.22, w.z0 + h * 0.15, w.z1 - h * 0.22);
+    ctx.fillStyle = 'rgba(40,40,50,0.28)';
+    ctx.fill();
+  }
+  ctx.restore();
+  facePath(r, f);
 }
 
 /** Окна, колонны, арки — рисуются только если на экране хватает пикселей. */
@@ -764,6 +1272,47 @@ function drawSign(
         ctx.fillStyle = c;
         ctx.fillRect(x, y - s + (i * s * 0.36) / 3, s * 0.55, (s * 0.36) / 3 + 0.3);
       });
+      break;
+    }
+    case 'clock': {
+      ctx.fillStyle = '#f6f2e6';
+      ctx.strokeStyle = '#3b3a36';
+      ctx.lineWidth = Math.max(0.6, s * 0.12);
+      ctx.beginPath();
+      ctx.ellipse(x, y - s * 0.5, s * 0.46, s * 0.5, -0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (s > 5) {
+        ctx.lineWidth = Math.max(0.6, s * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(x, y - s * 0.5);
+        ctx.lineTo(x + s * 0.08, y - s * 0.86);
+        ctx.moveTo(x, y - s * 0.5);
+        ctx.lineTo(x + s * 0.26, y - s * 0.42);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'statue': {
+      // Фигура на парапете: постамент, тело, голова, поднятая рука.
+      ctx.fillStyle = p.color ?? '#9a9a96';
+      const k = s / 10;
+      ctx.beginPath();
+      ctx.rect(x - 1.6 * k, y - 1.2 * k, 3.2 * k, 1.2 * k);
+      ctx.moveTo(x - 1.1 * k, y - 1.2 * k);
+      ctx.lineTo(x + 1.1 * k, y - 1.2 * k);
+      ctx.lineTo(x + 1.3 * k, y - 6.6 * k);
+      ctx.lineTo(x - 1.0 * k, y - 6.6 * k);
+      ctx.closePath();
+      ctx.moveTo(x + 1.2 * k, y - 6.2 * k);
+      ctx.lineTo(x + 2.6 * k, y - 9.4 * k);
+      ctx.lineTo(x + 2.1 * k, y - 9.7 * k);
+      ctx.lineTo(x + 0.6 * k, y - 6.6 * k);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + 0.25 * k, y - 7.6 * k, 0.95 * k, 0, Math.PI * 2);
+      ctx.fill();
       break;
     }
     case 'text': {

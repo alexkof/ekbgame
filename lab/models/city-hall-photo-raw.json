@@ -1,0 +1,70 @@
+{
+  "id": "city-hall-photo-raw",
+  "name": "Мэрия — фото как есть",
+  "source": "Фасад выпрямлен с фото гомографией без чистки.",
+  "parts": [
+    {
+      "type": "prism",
+      "outline": [
+        [-57.0, -21.6],
+        [61.8, 1.2],
+        [57.8, 21.8],
+        [-61.0, -1.0]
+      ],
+      "z": [0, 24],
+      "color": "#8e9088",
+      "roof": "#8d9a93",
+      "hip": 3.5,
+      "facade": "none",
+      "skins": [
+        {
+          "image": "city-hall/facade-raw.jpg",
+          "side": "south"
+        },
+        {
+          "image": "city-hall/end-raw.jpg",
+          "side": "west"
+        },
+        {
+          "image": "city-hall/end-raw.jpg",
+          "side": "east"
+        },
+        {
+          "image": "city-hall/facade-raw.jpg",
+          "side": "north"
+        }
+      ]
+    },
+    {
+      "type": "prism",
+      "outline": [
+        [-5.2, -8.1],
+        [8.6, -5.5],
+        [6.0, 8.3],
+        [-7.8, 5.7]
+      ],
+      "z": [24, 29.8],
+      "color": "#8e9088",
+      "roof": "#d9d3c4",
+      "facade": "bays",
+      "floor": 3.7,
+      "bays": {
+        "pier": "#8e9088",
+        "panel": "#d4834f",
+        "plinth": "#7f7d74",
+        "frame": "#f2efe6",
+        "plinthHeight": 0.8,
+        "friezeHeight": 1.4,
+        "bay": 4.6,
+        "windows": 1
+      }
+    },
+    {
+      "type": "billboard",
+      "image": "city-hall/tower.png",
+      "center": [0.4, 0.1],
+      "width": 16.9,
+      "z": [29.6, 66.6]
+    }
+  ]
+}

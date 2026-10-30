@@ -7,3 +7,6 @@ coverage/
 __pycache__/
 .venv/
 *.osm.pbf
+# Лаборатория: рабочие файлы и текстуры из фото без свободной лицензии
+lab/work/
+lab/models/city-hall/
