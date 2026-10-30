@@ -15,7 +15,7 @@ import { buildWorld } from '../src/map/world';
 
 /**
  * Лаборатория моделей: варианты одного объекта рядом, на карте и в виде каркаса для
- * художника/генератора. Страница только для разработки (npm run dev → /lab/).
+ * художника/генератора. Открывается по адресу /lab/ (и в npm run dev, и на сайте).
  */
 
 const labModels = import.meta.glob<ModelData>('./models/*.json', {

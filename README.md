@@ -7,6 +7,7 @@
 
 - Текущая версия (`main`): https://alexkof.github.io/ekbgame/
 - Первый прототип «Живой город»: https://alexkof.github.io/ekbgame/prototype/
+- Лаборатория моделей (варианты отрисовки объектов): https://alexkof.github.io/ekbgame/lab/
 
 Публикация происходит автоматически при каждом push в `main` (см. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 

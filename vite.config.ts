@@ -25,6 +25,12 @@ export default defineConfig({
       builtAt: new Date().toISOString(),
     }),
   },
+  build: {
+    rollupOptions: {
+      // Игра и лаборатория моделей (/lab/) — две страницы одной сборки.
+      input: { main: 'index.html', lab: 'lab/index.html' },
+    },
+  },
   test: {
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
   },
