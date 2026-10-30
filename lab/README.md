@@ -34,3 +34,25 @@ node lab/scripts/render.cjs lab/work/bake 0 city-hall-photo-kit:color:8 city-hal
 фото их нужно указать заново.
 
 Для игры нужны свои снимки или фото с Викисклада (CC BY-SA, с указанием автора).
+
+## Рисунок по каркасу (вариант F)
+
+Художник или генератор изображений рисует поверх каркаса модели, а движок ставит рисунок на
+карту пиксель в пиксель.
+
+```bash
+npm run dev &
+node lab/scripts/render.cjs lab/work/ai-kit 0 city-hall-procedural:color:8 city-hall-procedural:clay:8
+.venv/bin/python lab/scripts/prepare_art.py city-hall-procedural   # каркас 1024 px, маска, frame.json
+```
+
+В генератор (ChatGPT, Gemini, Qwen-Image-Edit и т. п.) отдаются каркас `lab/work/ai-kit/guide-color.png`,
+фото здания и образец стиля, запрос — в `lab/work/ai-kit/prompt.txt`. Готовый рисунок:
+
+```bash
+.venv/bin/python lab/scripts/import_art.py путь/к/рисунку.png
+```
+
+Скрипт подгоняет размер, выравнивает сдвиг и масштаб по контурам (генераторы слегка
+«гуляют»), вырезает фон по силуэту модели и пишет `lab/models/city-hall-art/art.webp` и
+`lab/models/city-hall-art.json`. В лаборатории появляется вариант F.
