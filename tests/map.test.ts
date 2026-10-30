@@ -37,6 +37,33 @@ describe('проекция', () => {
     }
   });
 
+  it('центр крупнее: спрямление сохраняет масштаб центра и средний масштаб на кольцах', () => {
+    // Местный масштаб — корень из изменения площади маленького квадрата вокруг точки.
+    const scaleAt = (x: number, y: number) => {
+      const w = (dx: number, dy: number) => P.geoToWorld(P.localToGeo(x + dx, y + dy));
+      const a = w(0, 0);
+      const b = w(5, 0);
+      const c = w(0, 5);
+      return Math.sqrt(Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))) / 5;
+    };
+    const design = (r: number) =>
+      Math.sqrt(tangentialScale(r, radius, power) * radialScale(r, radius, power));
+    expect(Math.abs(scaleAt(0, 0) - 1)).toBeLessThan(0.01);
+    let prev = Infinity;
+    for (let r = 250; r <= 5000; r += 250) {
+      let sum = 0;
+      const n = 72;
+      for (let k = 0; k < n; k++) {
+        const t = (2 * Math.PI * k) / n;
+        sum += scaleAt(r * Math.cos(t), r * Math.sin(t));
+      }
+      const mean = sum / n;
+      expect(Math.abs(mean / design(r) - 1), `${r} м`).toBeLessThan(0.01);
+      expect(mean, `${r} м`).toBeLessThan(prev);
+      prev = mean;
+    }
+  });
+
   it('поле спрямления посчитано для текущих параметров сжатия и плавное', () => {
     expect(MAP_STRAIGHTEN.warp).toEqual({ radius, power });
     // Спрямление сдвигает точки, но не переворачивает и не рвёт карту: соседние точки

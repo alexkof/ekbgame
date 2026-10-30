@@ -12,12 +12,18 @@
 
 Задача: найти самое плавное поле D, при котором
   - каждая прямая линия графа улиц (roads.py) лежит на прямой;
-  - линии одной группы параллельны, а перпендикулярные группы перпендикулярны.
+  - линии одной группы параллельны, а перпендикулярные группы перпендикулярны;
+  - центр остаётся крупнее, как задумано сжатием: площадь внутри каждого круга с центром на
+    Плотинке не меняется, поэтому средний масштаб на каждом кольце — как у сжатия, а в центре
+    масштаб 1:1. Без этого условия спрямление сжимает центр: сжатие выгибает улицы серединой
+    наружу, и прямая «по средней» тянет середины к центру.
 Положения и направления прямых не задаются заранее — они ищутся вместе с полем, поэтому
 улицы сдвигаются и поворачиваются ровно настолько, насколько нужно. «Плавность» — минимум
-энергии  |ε(D)|² + SMOOTH²·|∇²D|² + |D|²/DECAY², где ε — деформация (растяжение и сдвиг
-без поворота, как в теории упругости): участки карты могут чуть повернуться, но почти не
-искажаются; тонкая пластина убирает изломы, затухание возвращает поле к нулю вдали от улиц.
+энергии  |ε(D)|² + AREA²·(div D)² + SMOOTH²·|∇²D|² + |D|²/DECAY², где ε — деформация
+(растяжение и сдвиг без поворота, как в теории упругости): участки карты могут чуть
+повернуться, но почти не искажаются; div D — местное изменение площади (местный масштаб
+держится близко к замыслу); тонкая пластина убирает изломы, затухание возвращает поле к нулю
+вдали от улиц.
 
 Условие «точка на прямой» линейно по D и сдвигу прямой c (n·(p + D(p)) = c), направление
 прямой линеаризуется (метод Гаусса — Ньютона, несколько итераций). Условие ставится только
@@ -39,6 +45,9 @@ CELL = 60.0  # шаг сетки, мировые м
 MARGIN = 1200.0  # запас вокруг линий, мировые м (на краю сетки поле равно нулю)
 SMOOTH = 100.0  # на каком расстоянии сглаживаются изломы поля, мировые м
 DECAY = 900.0  # на каком расстоянии от улиц поле затухает, мировые м
+AREA = 2.0  # во сколько раз местное изменение площади дороже искажения формы
+KEEP_SCALE = True  # площадь внутри каждого круга с центром на Плотинке не меняется
+RING_STEP = 100.0  # шаг этих кругов, мировые м
 SAMPLE = 15.0  # шаг точек-условий вдоль линий, реальные м
 W_SAMPLE = 3.0  # вес условия в точке вдоль линии
 W_NODE = 30.0  # вес условия в узле (после решения узлы ещё и точно кладутся на прямые — snap)
@@ -185,6 +194,9 @@ def smoothness_rows(grid):
     add(ddy(1, 1.0), m)  # ε_yy
     s = math.sqrt(0.5)
     add(ddy(0, s) + ddx(1, s), m)  # √2·ε_xy, ε_xy = (∂Dx/∂y + ∂Dy/∂x) / 2
+    # Местное изменение площади (дивергенция D) штрафуется дополнительно: поле спрямляет
+    # больше сдвигом и поворотом, а местный масштаб остаётся близким к замыслу.
+    add(ddx(0, AREA) + ddy(1, AREA), m)
 
     # узлы: вторые разности и затухание
     J, I = np.mgrid[1 : ny - 1, 1 : nx - 1]
@@ -202,10 +214,13 @@ def smoothness_rows(grid):
     return np.concatenate(R), np.concatenate(C), np.concatenate(V).astype(float), r0
 
 
-def solve_normal(A, b, nd):
-    """Наименьшие квадраты A·x ≈ b. Первые nd неизвестных — сетка (разреженная часть),
-    остальные (сдвиги и повороты прямых, их немного, но каждая связана с сотнями узлов
-    сетки) исключаются через дополнение Шура, чтобы разложение оставалось разреженным."""
+def solve_normal(A, b, nd, C=None):
+    """Наименьшие квадраты A·x ≈ b при точных условиях C·x[:nd] = 0.
+
+    Первые nd неизвестных — сетка (разреженная часть). Остальные (сдвиги и повороты прямых:
+    их немного, но каждая связана с сотнями узлов сетки) и множители Лагранжа условий C
+    исключаются через дополнение Шура, чтобы разложение оставалось разреженным.
+    """
     K = (A.T @ A).tocsc()
     f = A.T @ b
     Kdd = K[:nd, :nd].tocsc()
@@ -213,9 +228,56 @@ def solve_normal(A, b, nd):
     Kee = K[nd:, nd:].toarray()
     lu = splinalg.splu(Kdd)
     Y = lu.solve(Kde)
-    xd0 = lu.solve(f[:nd])
-    xe = np.linalg.solve(Kee - Kde.T @ Y, f[nd:] - Kde.T @ xd0)
-    return np.concatenate([xd0 - Y @ xe, xe])
+    x0 = lu.solve(f[:nd])
+    if C is None:
+        xe = np.linalg.solve(Kee - Kde.T @ Y, f[nd:] - Kde.T @ x0)
+        return np.concatenate([x0 - Y @ xe, xe])
+    # Условия Kdd·xd + Kde·xe + Cᵀλ = fd, Kedᵀ·xd + Kee·xe = fe, C·xd = 0
+    Z = lu.solve(C.T.toarray())
+    ne = Kee.shape[0]
+    m = C.shape[0]
+    M = np.zeros((ne + m, ne + m))
+    M[:ne, :ne] = Kee - Kde.T @ Y
+    M[:ne, ne:] = -Kde.T @ Z
+    M[ne:, :ne] = -(C @ Y)
+    M[ne:, ne:] = -(C @ Z)
+    rhs = np.concatenate([f[nd:] - Kde.T @ x0, -(C @ x0)])
+    sol = np.linalg.solve(M, rhs)
+    xe, lam = sol[:ne], sol[ne:]
+    return np.concatenate([x0 - Y @ xe - Z @ lam, xe])
+
+
+def ring_constraints(grid, step=RING_STEP):
+    """Условия «площадь внутри круга не меняется» для кругов с центром в начале координат.
+
+    По теореме о дивергенции изменение площади внутри круга — это поток поля через окружность,
+    поэтому условие: среднее радиальное смещение точек окружности равно нулю. Тогда средний
+    масштаб на каждом кольце остаётся как у радиального сжатия — центр крупнее, как задумано.
+    """
+    x1 = grid.x0 + (grid.nx - 1) * grid.cell
+    y1 = grid.y0 + (grid.ny - 1) * grid.cell
+    rmax = min(-grid.x0, -grid.y0, x1, y1) - grid.cell
+    rows, cols, vals = [], [], []
+    k = 0
+    for rho in np.arange(step, rmax, step):
+        n = max(16, int(2 * math.pi * rho / 15))
+        t = np.linspace(0, 2 * math.pi, n, endpoint=False)
+        P = np.column_stack((rho * np.cos(t), rho * np.sin(t)))
+        rad = P / rho
+        for var, wb in grid.bilinear(P):
+            ok = var >= 0
+            for comp in (0, 1):
+                rows.append(np.full(ok.sum(), k))
+                cols.append(var[ok] + comp * grid.N)
+                vals.append((wb * rad[:, comp])[ok] / n)
+        k += 1
+    if k == 0:
+        return None
+    C = sparse.csr_matrix(
+        (np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(k, 2 * grid.N)
+    )
+    C.sum_duplicates()
+    return C
 
 
 def build(nodes_real, lines, groups, to_world0):
@@ -247,6 +309,7 @@ def build(nodes_real, lines, groups, to_world0):
     N = grid.N
     L = len(lines)
     ncol = 2 * N + L + nclass
+    rings = ring_constraints(grid) if KEEP_SCALE else None
     Rs, Cs, Vs, nsmooth = smoothness_rows(grid)
     stencil = grid.bilinear(P)
     g_of = np.array([ln['group'] for ln in lines])[line_of]
@@ -283,7 +346,7 @@ def build(nodes_real, lines, groups, to_world0):
             (np.concatenate(V), (np.concatenate(R), np.concatenate(C))),
             shape=(nrow + extra.size, ncol),
         )
-        x = solve_normal(A, b, 2 * N)
+        x = solve_normal(A, b, 2 * N, rings)
         for k in range(nclass):
             theta[k] += x[2 * N + L + k]
     field = grid.field(x)
