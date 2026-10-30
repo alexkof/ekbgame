@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-"""Подготовка данных карты из выгрузки OpenStreetMap (.osm.pbf).
+"""Подготовка данных карты из OpenStreetMap.
 
 Команды:
-  layers  <pbf>                     пересобрать базовые слои src/map/data/layers/*.geo.json
-  find    <pbf> <lat> <lon> [r_m]   найти объекты OSM рядом с точкой (для поиска id)
-  outline <pbf> <w123|r456> ...     контур объекта: в градусах и в метрах от центра
+  extract <pbf>                     сохранить срез OSM для карты в scripts/map/osm/ekb.osm.pbf
+  layers  [pbf]                     пересобрать базовые слои src/map/data/layers/*
+  straighten                        пересчитать поле спрямления по layers/roads.json (без OSM)
+  roads-geojson <файл>              выгрузить граф улиц в GeoJSON (посмотреть в geojson.io)
+  find    [pbf] <lat> <lon> [r_m]   найти объекты OSM рядом с точкой (для поиска id)
+  outline [pbf] <w123|r456> ...     контур объекта: в градусах и в метрах от центра
 
-Выгрузка: https://download.openstreetmap.fr/extracts/russia/ural_federal_district/
+Без аргумента pbf команды читают срез из репозитория (scripts/map/osm/ekb.osm.pbf), поэтому
+скачивать выгрузку нужно, только чтобы обновить данные OSM. Полная выгрузка области:
+https://download.openstreetmap.fr/extracts/russia/ural_federal_district/
 (sverdlovsk_oblast-latest.osm.pbf). Зависимости: pip install -r scripts/map/requirements.txt
 
 Правила отбора (что попадает на карту) — константы ниже. Детализация зависит от зоны:
 в центре больше улиц и мелких объектов, на окраинах — только магистрали и крупные
 водоёмы/лесопарки. Упрощение линий делается в «игровых» координатах (после радиального
 сжатия), поэтому погрешность на экране одинакова и в центре, и на окраинах.
-Формулы проекции должны совпадать с src/map/projection.ts.
+Формулы проекции должны совпадать с src/map/projection.ts. Граф улиц — roads.py,
+поле спрямления — straighten.py.
 """
 
 import argparse
@@ -29,9 +35,13 @@ from shapely import geometry as sg
 from shapely import ops
 from shapely import wkb as swkb
 
+import roads
+import straighten
+
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / 'src' / 'map' / 'data'
 CONFIG = json.loads((DATA / 'config.json').read_text(encoding='utf-8'))
+SNAPSHOT = ROOT / 'scripts' / 'map' / 'osm' / 'ekb.osm.pbf'
 
 # ---------------------------------------------------------------- проекция
 
@@ -63,6 +73,36 @@ def warp(x, y):
     """Радиальное сжатие: центр 1:1, к окраинам масштаб плавно уменьшается."""
     s = tangential_scale(math.hypot(x, y))
     return x * s, y * s
+
+
+def to_world0(x, y):
+    """Реальные метры → мир до спрямления (радиальное сжатие, ось Y на юг, как в TS)."""
+    s = tangential_scale(math.hypot(x, y))
+    return x * s, -y * s
+
+
+def unwarp_radius(rw):
+    """Мировой радиус → реальный (метод Ньютона, как unwarpRadius в projection.ts)."""
+    if rw <= 0:
+        return 0.0
+    r = rw
+    for _ in range(40):
+        u2 = (r / WARP_R) ** 2
+        f = r * tangential_scale(r) - rw
+        d = tangential_scale(r) * (1 + u2 * (1 - WARP_Q)) / (1 + u2)
+        nxt = r - f / d
+        r = nxt if nxt > 0 else r / 2
+        if abs(f) < 1e-9:
+            break
+    return r
+
+
+def from_world0(X, Y):
+    rw = math.hypot(X, Y)
+    if rw == 0:
+        return 0.0, 0.0
+    k = unwarp_radius(rw) / rw
+    return X * k, -Y * k
 
 
 def zone_of(r):
@@ -130,6 +170,27 @@ TRAM_STREETS = {
 }
 TRAM_RADIUS = 3500  # дальше трамвай не показываем
 
+# Дороги для автомобилей (всё остальное — тротуары, дворы, тропинки — в граф не входит).
+MOTORABLE = {
+    'motorway',
+    'trunk',
+    'primary',
+    'secondary',
+    'tertiary',
+    'unclassified',
+    'residential',
+    'living_street',
+    'motorway_link',
+    'trunk_link',
+    'primary_link',
+    'secondary_link',
+    'tertiary_link',
+}
+MAJOR = {'motorway', 'trunk', 'primary', 'motorway_link', 'trunk_link', 'primary_link'}
+# По этим классам определяется, вдоль какой улицы идёт трамвайный путь.
+TRAM_GUIDE = {'trunk', 'primary', 'secondary', 'tertiary', 'trunk_link', 'primary_link'}
+CONNECTOR = 250  # короткие связки (мосты и т. п.) между выбранными улицами, мировые м
+
 # Минимальная площадь (м²) по зонам: center / middle / outskirts.
 MIN_AREA = {
     'water': (3_000, 30_000, 150_000),
@@ -137,8 +198,11 @@ MIN_AREA = {
     'forest': (20_000, 100_000, 500_000),
     'plaza': (2_500, 1e12, 1e12),
 }
-SIMPLIFY = 2.0  # допуск упрощения, «игровые» метры
-SIMPLIFY_AREA = 4.0
+SIMPLIFY_AREA = 4.0  # допуск упрощения контуров, «игровые» метры
+
+# Срез OSM в репозитории: что сохраняем (радиусы — реальные метры от центра).
+SNAPSHOT_RADIUS = EXTENT + 2000  # улицы, рельсы, вода, зелень (с запасом за край карты)
+SNAPSHOT_BUILDINGS = 3000  # здания — для команд find/outline (контуры объектов)
 
 
 def area_kind(tags):
@@ -170,34 +234,17 @@ def geom_local(g):
     return shapely.transform(g, lambda c: np.column_stack(to_local(c[:, 0], c[:, 1])))
 
 
-def dp_indices(pts, tol):
-    """Дуглас — Пекер, возвращает индексы сохраняемых точек."""
-    n = len(pts)
-    if n < 3:
-        return list(range(n))
-    keep = [False] * n
-    keep[0] = keep[-1] = True
-    stack = [(0, n - 1)]
-    while stack:
-        a, b = stack.pop()
-        ax, ay = pts[a]
-        bx, by = pts[b]
-        dx, dy = bx - ax, by - ay
-        L = math.hypot(dx, dy)
-        best, idx = -1.0, -1
-        for i in range(a + 1, b):
-            px, py = pts[i]
-            if L == 0:
-                d = math.hypot(px - ax, py - ay)
-            else:
-                d = abs(dy * (px - ax) - dx * (py - ay)) / L
-            if d > best:
-                best, idx = d, i
-        if best > tol:
-            keep[idx] = True
-            stack.append((a, idx))
-            stack.append((idx, b))
-    return [i for i in range(n) if keep[i]]
+def geom_world0(g):
+    """Реальные метры → мир до спрямления (векторно)."""
+
+    def f(c):
+        s = (1 + (np.hypot(c[:, 0], c[:, 1]) / WARP_R) ** 2) ** (-WARP_Q / 2)
+        return np.column_stack((c[:, 0] * s, -c[:, 1] * s))
+
+    return shapely.transform(g, f)
+
+
+dp_indices = roads.dp_indices
 
 
 def simplify_coords(coords, tol):
@@ -207,8 +254,8 @@ def simplify_coords(coords, tol):
     return [rnd(to_geo(*coords[i])) for i in idx]
 
 
-def rnd(p):
-    return [round(p[0], 5), round(p[1], 5)]
+def rnd(p, digits=5):
+    return [round(p[0], digits), round(p[1], digits)]
 
 
 def lines_of(g):
@@ -253,7 +300,7 @@ class Collector(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
         self.wkb = osmium.geom.WKBFactory()
-        self.streets = []  # (name, highway, LineString local)
+        self.roads = []  # {'name', 'highway', 'oneway', 'line' (LineString local)}
         self.tram = []
         self.subway = []
         self.rail = []
@@ -272,10 +319,20 @@ class Collector(osmium.SimpleHandler):
         t = w.tags
         hw = t.get('highway')
         rw = t.get('railway')
-        if hw in ('trunk', 'primary', 'secondary', 'tertiary', 'trunk_link', 'primary_link'):
+        if hw in MOTORABLE:
             g = self._line(w)
             if g is not None:
-                self.streets.append((norm_name(t.get('name', '')), hw, g))
+                oneway = t.get('oneway')
+                if oneway == '-1':
+                    g = g.reverse()
+                self.roads.append(
+                    {
+                        'name': norm_name(t.get('name', '')),
+                        'highway': hw,
+                        'oneway': oneway in ('yes', '1', '-1') or t.get('junction') == 'roundabout',
+                        'line': g,
+                    }
+                )
         elif rw == 'tram' and t.get('service') is None:
             g = self._line(w)
             if g is not None:
@@ -320,56 +377,219 @@ def feature(geom_type, coords, props):
     }
 
 
+SOURCE = '© участники OpenStreetMap, ODbL. Сгенерировано scripts/map/osm_tool.py'
+
+
+def write_json(name, obj):
+    path = DATA / 'layers' / name
+    path.write_text(json.dumps(obj, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+    return path
+
+
 def write_layer(name, features, comment):
-    path = DATA / 'layers' / f'{name}.geo.json'
     fc = {
         'type': 'FeatureCollection',
         'name': name,
         'description': comment,
-        'source': '© участники OpenStreetMap, ODbL. Сгенерировано scripts/map/osm_tool.py',
+        'source': SOURCE,
         'features': features,
     }
-    path.write_text(json.dumps(fc, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+    path = write_json(f'{name}.geo.json', fc)
     print(f'{path.relative_to(ROOT)}: {len(features)} объектов', file=sys.stderr)
 
 
 def street_rank(name, hw):
-    if name in AVENUES or hw in ('trunk', 'trunk_link'):
+    if name in AVENUES or hw in ('motorway', 'trunk'):
         return 1
-    if hw in ('primary', 'primary_link', 'secondary'):
+    if hw in ('primary', 'secondary'):
         return 2
     return 3
 
 
+# ------------------------------------------------------------ граф улиц
+
+
+def select_roads(all_roads):
+    """Улицы для графа: основные улицы центра и срединной зоны, магистрали — везде.
+
+    К ним добавляются короткие связки между ними (мосты с собственным названием и т. п.),
+    иначе в улице остаётся разрыв.
+    """
+    origin = sg.Point(0, 0)
+    chosen, rest = [], []
+    for r in all_roads:
+        d = r['line'].distance(origin)
+        if d > EXTENT + 500:
+            continue
+        main = r['name'] in MAIN_STREETS and d < ZONES['middle']
+        if main or (r['highway'] in MAJOR and r['name']):
+            chosen.append({**r, 'line': geom_world0(r['line'])})
+        elif r['highway'] not in ('residential', 'unclassified', 'living_street'):
+            rest.append(r)
+    corridor = shapely.unary_union([w['line'].buffer(roads.CORRIDOR) for w in chosen])
+    shapely.prepare(corridor)
+    extra = []
+    for r in rest:
+        line = geom_world0(r['line'])
+        if line.length > CONNECTOR:
+            continue
+        a = sg.Point(line.coords[0])
+        b = sg.Point(line.coords[-1])
+        if corridor.contains(a) and corridor.contains(b) and not corridor.contains(line):
+            extra.append({**r, 'line': line})
+    return chosen + extra
+
+
+def build_roads(c):
+    """Граф улиц и поле спрямления → layers/roads.json и layers/straighten.json."""
+    ways = select_roads(c.roads)
+    tram = [geom_world0(g) for g in c.tram]
+
+    def center_dist(X, Y):
+        return math.hypot(*from_world0(X, Y))
+
+    net = roads.build(ways, tram, from_world0, center_dist)
+    nodes_real = [from_world0(*p) for p in net.nodes]
+    groups = [{'perpendicular': gr['perpendicular']} for gr in net.groups]
+    streets = [
+        {
+            'name': s['name'],
+            'rank': street_rank(s['name'], s['cls']),
+            'class': s['cls'],
+            'oneway': s['oneway'],
+            'tram': s['tram'],
+            'nodes': s['nodes'],
+        }
+        for s in net.streets
+    ]
+    write_roads(nodes_real, streets, net.lines, groups)
+
+
+def write_roads(nodes_real, streets, lines, groups):
+    """Поле спрямления по прямым линиям, узлы линий — точно на прямые; запись обоих файлов."""
+    field, normals, offsets = straighten.build(nodes_real, lines, groups, to_world0)
+    field = straighten.decode(straighten.encode(straighten.crop(field)))
+    world0 = [to_world0(*p) for p in nodes_real]
+    snapped = straighten.snap(world0, lines, normals, offsets, field)
+    nodes_real = [from_world0(*p) for p in snapped]
+
+    # Группам — читаемые описания: реальный азимут (от севера по часовой) и главные улицы.
+    used = [g for g in range(len(groups)) if any(ln['group'] == g for ln in lines)]
+    renum = {g: i for i, g in enumerate(used)}
+    out_groups = []
+    for g in used:
+        names = {}
+        sx = sy = 0.0
+        for ln in lines:
+            if ln['group'] != g:
+                continue
+            a = nodes_real[ln['nodes'][0]]
+            b = nodes_real[ln['nodes'][-1]]
+            t = 2 * math.atan2(b[0] - a[0], b[1] - a[1])  # удвоенный азимут: прямая без стороны
+            sx += math.dist(a, b) * math.cos(t)
+            sy += math.dist(a, b) * math.sin(t)
+            for s in streets:
+                if ln['nodes'][0] in s['nodes'] and ln['nodes'][1] in s['nodes'] and s['name']:
+                    names[s['name']] = names.get(s['name'], 0) + math.dist(a, b)
+                    break
+        item = {
+            'azimuth': round(math.degrees(math.atan2(sy, sx) / 2) % 180, 1),
+            'streets': [n for n, _ in sorted(names.items(), key=lambda kv: -kv[1])],
+        }
+        pj = groups[g]['perpendicular']
+        if pj is not None and pj in renum:
+            item['perpendicular'] = renum[pj]
+        out_groups.append(item)
+
+    doc = {
+        'name': 'roads',
+        'description': (
+            'Граф улиц: узлы [долгота, широта] и улицы — цепочки узлов (индексы в nodes). '
+            'Улицы с общим узлом пересекаются. lines — прямые участки: их узлы на карте лежат '
+            'на одной прямой; линии одной группы (groups) параллельны. rank: 1 — проспект/'
+            'магистраль, 2 — улица, 3 — малая; oneway: 1 — движение по порядку узлов, '
+            '−1 — против; tram — по улице идёт трамвай. Подробно — docs/MAP.md, «Граф улиц».'
+        ),
+        'source': SOURCE,
+        'nodes': [rnd(to_geo(*p), 7) for p in nodes_real],
+        'streets': [
+            {
+                'name': s['name'],
+                'rank': s['rank'],
+                'class': s['class'],
+                **({'oneway': s['oneway']} if s.get('oneway') else {}),
+                **({'tram': True} if s.get('tram') else {}),
+                'nodes': s['nodes'],
+            }
+            for s in streets
+        ],
+        'lines': [{'group': renum[ln['group']], 'nodes': ln['nodes']} for ln in lines],
+        'groups': out_groups,
+    }
+    path = write_json('roads.json', doc)
+    print(
+        f'{path.relative_to(ROOT)}: {len(doc["nodes"])} узлов, {len(doc["streets"])} улиц, '
+        f'{len(doc["lines"])} прямых в {len(out_groups)} группах',
+        file=sys.stderr,
+    )
+    x0, y0, nx, ny, cell, D = field
+    grid = {
+        'description': (
+            'Поле спрямления: смещение (dx, dy) мировых координат после радиального сжатия, '
+            'чтобы прямые улицы были прямыми, а параллельные — параллельными. Сетка nx × ny '
+            'с шагом cell от (x0, y0); data — base64 Int16 little-endian, по строкам, '
+            'пары dx, dy в единицах unit (м). Считается по roads.json (scripts/map/straighten.py) '
+            'для параметров сжатия warp — при их изменении: osm_tool.py straighten.'
+        ),
+        'warp': {'radius': WARP_R, 'power': WARP_Q},
+        **straighten.encode(field),
+    }
+    path = write_json('straighten.json', grid)
+    mags = np.linalg.norm(D, axis=2)
+    print(
+        f'{path.relative_to(ROOT)}: сетка {nx}×{ny} по {cell:.0f} м, '
+        f'смещение до {mags.max():.0f} м',
+        file=sys.stderr,
+    )
+
+
+def cmd_straighten():
+    """Пересчитать поле по roads.json (после ручной правки графа или параметров сжатия)."""
+    doc = json.loads((DATA / 'layers' / 'roads.json').read_text(encoding='utf-8'))
+    nodes_real = [to_local(*p) for p in doc['nodes']]
+    groups = [{'perpendicular': g.get('perpendicular')} for g in doc['groups']]
+    write_roads(nodes_real, doc['streets'], doc['lines'], groups)
+
+
+def cmd_roads_geojson(out):
+    doc = json.loads((DATA / 'layers' / 'roads.json').read_text(encoding='utf-8'))
+    nodes = doc['nodes']
+    feats = []
+    for s in doc['streets']:
+        props = {k: v for k, v in s.items() if k != 'nodes'}
+        feats.append(feature('LineString', [nodes[k] for k in s['nodes']], props))
+    for i, ln in enumerate(doc['lines']):
+        coords = [nodes[k] for k in ln['nodes']]
+        feats.append(feature('LineString', coords, {'line': i, 'group': ln['group']}))
+    Path(out).write_text(
+        json.dumps({'type': 'FeatureCollection', 'features': feats}, ensure_ascii=False) + '\n',
+        encoding='utf-8',
+    )
+    print(f'{out}: {len(feats)} линий', file=sys.stderr)
+
+
+# ---------------------------------------------------------------- слои
+
+
 def build_layers(pbf):
     c = Collector()
-    c.apply_file(pbf, locations=True)
+    c.apply_file(str(pbf), locations=True)
 
-    # --- улицы: в центре и срединной зоне — список основных, дальше — магистрали
-    groups = {}
-    for name, hw, g in c.streets:
-        r = g.distance(sg.Point(0, 0))
-        major = hw in ('trunk', 'primary', 'trunk_link', 'primary_link')
-        if name in MAIN_STREETS and r < ZONES['middle']:
-            pass
-        elif major and name:
-            pass
-        else:
-            continue
-        key = (name, street_rank(name, hw))
-        groups.setdefault(key, []).append(g)
-    streets = []
-    for (name, rank), lines in sorted(groups.items()):
-        merged = ops.linemerge(lines)
-        for ln in lines_of(merged.intersection(EXTENT_CIRCLE)):
-            if ln.length < 60:
-                continue
-            coords = simplify_coords(list(ln.coords), SIMPLIFY)
-            streets.append(feature('LineString', coords, {'name': name, 'rank': rank}))
-    write_layer('streets', streets, 'Основные улицы. rank: 1 — проспект/магистраль, 2 — улица, 3 — малая')
+    # --- граф улиц (вместо прежнего слоя streets.geo.json) и поле спрямления
+    build_roads(c)
 
     # --- трамвай: только вдоль ключевых улиц
-    named = [(n, g) for n, _, g in c.streets if n]
+    named = [(r['name'], r['line']) for r in c.roads if r['name'] and r['highway'] in TRAM_GUIDE]
     tram_lines = []
     for g in c.tram:
         mid = g.interpolate(0.5, normalized=True)
@@ -437,6 +657,76 @@ def build_layers(pbf):
     write_layer('districts', places, 'Подписи жилых районов (видны на мелком масштабе)')
 
 
+# ------------------------------------------------------------ срез OSM
+
+
+def snapshot_way(tags):
+    if tags.get('highway') in MOTORABLE | {'pedestrian'}:
+        return True
+    if tags.get('railway') in ('tram', 'rail', 'subway', 'light_rail'):
+        return True
+    if tags.get('waterway') in ('river', 'canal'):
+        return True
+    return area_kind(tags) is not None or tags.get('natural') in ('water', 'wood')
+
+
+def cmd_extract(pbf, out):
+    """Срез выгрузки OSM для карты: только нужное и только вокруг города (~3 МБ вместо ~100).
+
+    Сохраняются дороги (кроме дворов и тропинок), рельсы, вода, зелень, площади, станции,
+    подписи районов — в радиусе SNAPSHOT_RADIUS; здания — в радиусе SNAPSHOT_BUILDINGS.
+    Объекты сохраняются целиком, вместе с точками и частями мультиполигонов.
+    """
+
+    def radius(lon, lat):
+        return math.hypot(*to_local(lon, lat))
+
+    near, keep = set(), set()
+    for o in osmium.FileProcessor(str(pbf), osmium.osm.NODE | osmium.osm.WAY).with_locations():
+        if not o.is_way():
+            continue
+        try:
+            r = min(radius(n.lon, n.lat) for n in o.nodes)
+        except (osmium.InvalidLocationError, ValueError):
+            continue
+        if r > SNAPSHOT_RADIUS:
+            continue
+        near.add(o.id)
+        if snapshot_way(o.tags) or ('building' in o.tags and r < SNAPSHOT_BUILDINGS):
+            keep.add(o.id)
+    rels = set()
+    for o in osmium.FileProcessor(str(pbf), osmium.osm.RELATION):
+        t = o.tags
+        if t.get('type') != 'multipolygon' or not (snapshot_way(t) or 'building' in t):
+            continue
+        if any(m.type == 'w' and m.ref in near for m in o.members):
+            rels.add(o.id)
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with osmium.BackReferenceWriter(str(out), ref_src=str(pbf), overwrite=True) as w:
+        for o in osmium.FileProcessor(str(pbf)).with_locations():
+            if o.is_node():
+                t = o.tags
+                if (t.get('place') == 'suburb' or t.get('railway') == 'station') and radius(
+                    o.lon, o.lat
+                ) < SNAPSHOT_RADIUS:
+                    w.add(o)
+            elif o.is_way():
+                if o.id in keep:
+                    w.add(o)
+            elif o.is_relation() and o.id in rels:
+                w.add(o)
+    header = osmium.io.Reader(str(pbf), osmium.osm.osm_entity_bits.NOTHING)
+    stamp = header.header().get('osmosis_replication_timestamp') or 'неизвестно'
+    header.close()
+    print(
+        f'{out}: {out.stat().st_size / 1e6:.1f} МБ, путей {len(keep)}, '
+        f'мультиполигонов {len(rels)}; '
+        f'данные OSM на {stamp}',
+        file=sys.stderr,
+    )
+
+
 # ------------------------------------------------------- поиск и контуры
 
 
@@ -478,7 +768,7 @@ class Finder(osmium.SimpleHandler):
 def cmd_find(pbf, lat, lon, radius):
     x, y = to_local(lon, lat)
     f = Finder(near=(x, y, radius))
-    f.apply_file(pbf, locations=True)
+    f.apply_file(str(pbf), locations=True)
     for d, key, tags, area in sorted(f.found, key=lambda t: t[0]):
         short = {k: v for k, v in tags.items() if not k.startswith(('name:', 'contact', 'wiki'))}
         print(f'{d:6.0f} м  {key:12} {area:8.0f} м²  {short}')
@@ -486,7 +776,7 @@ def cmd_find(pbf, lat, lon, radius):
 
 def cmd_outline(pbf, ids):
     f = Finder(want=set(ids))
-    f.apply_file(pbf, locations=True)
+    f.apply_file(str(pbf), locations=True)
     for key, tags, g in f.found:
         gl = geom_local(g)
         cx, cy = gl.centroid.x, gl.centroid.y
@@ -509,26 +799,47 @@ def cmd_outline(pbf, ids):
         print(json.dumps(out, ensure_ascii=False))
 
 
+def pbf_and_rest(args):
+    """Первый аргумент — файл .pbf, если он так выглядит; иначе — срез из репозитория."""
+    if args and args[0].endswith('.pbf'):
+        return Path(args[0]), args[1:]
+    if not SNAPSHOT.exists():
+        sys.exit(f'Нет среза {SNAPSHOT.relative_to(ROOT)}: укажите выгрузку .osm.pbf')
+    return SNAPSHOT, args
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
+    p = sub.add_parser('extract')
+    p.add_argument('pbf')
+    p.add_argument('out', nargs='?', default=str(SNAPSHOT))
     p = sub.add_parser('layers')
-    p.add_argument('pbf')
+    p.add_argument('args', nargs='*')
+    sub.add_parser('straighten')
+    p = sub.add_parser('roads-geojson')
+    p.add_argument('out')
     p = sub.add_parser('find')
-    p.add_argument('pbf')
-    p.add_argument('lat', type=float)
-    p.add_argument('lon', type=float)
-    p.add_argument('radius', type=float, nargs='?', default=60)
+    p.add_argument('args', nargs='+')
     p = sub.add_parser('outline')
-    p.add_argument('pbf')
-    p.add_argument('ids', nargs='+')
+    p.add_argument('args', nargs='+')
     a = ap.parse_args()
-    if a.cmd == 'layers':
-        build_layers(a.pbf)
+    if a.cmd == 'extract':
+        cmd_extract(a.pbf, a.out)
+    elif a.cmd == 'layers':
+        pbf, _ = pbf_and_rest(a.args)
+        build_layers(pbf)
+    elif a.cmd == 'straighten':
+        cmd_straighten()
+    elif a.cmd == 'roads-geojson':
+        cmd_roads_geojson(a.out)
     elif a.cmd == 'find':
-        cmd_find(a.pbf, a.lat, a.lon, a.radius)
+        pbf, rest = pbf_and_rest(a.args)
+        lat, lon = float(rest[0]), float(rest[1])
+        cmd_find(pbf, lat, lon, float(rest[2]) if len(rest) > 2 else 60)
     else:
-        cmd_outline(a.pbf, a.ids)
+        pbf, rest = pbf_and_rest(a.args)
+        cmd_outline(pbf, rest)
 
 
 if __name__ == '__main__':

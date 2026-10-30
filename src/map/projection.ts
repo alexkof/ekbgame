@@ -1,4 +1,4 @@
-import type { LonLat, MapConfig, ZoneId } from './types';
+import type { LonLat, MapConfig, StraightenGrid, ZoneId } from './types';
 
 /**
  * Цепочка систем координат карты (подробно — docs/MAP.md):
@@ -8,7 +8,9 @@ import type { LonLat, MapConfig, ZoneId } from './types';
  *    проекция; на размере города погрешность < 0,1 %).
  * 3. Мир: радиальное сжатие вокруг центра. Масштаб в центре 1:1, к окраинам плавно
  *    уменьшается; направления от центра сохраняются, форма объектов искажается мало.
- *    Ось Y мира направлена на юг (как ось экрана).
+ *    Ось Y мира направлена на юг (как ось экрана). Сжатие изгибает прямые улицы, поэтому
+ *    к нему добавлено поле спрямления — плавное смещение, после которого прямые улицы
+ *    снова прямые, а параллельные — параллельные (StraightenGrid, scripts/map/straighten.py).
  * 4. Плоскость изображения: косоугольная проекция «север сверху»: земля сжата по
  *    вертикали (groundTilt), высота уходит вверх с небольшим наклоном вправо (lean).
  * 5. Экран: сдвиг и зум камеры (camera.ts).
@@ -19,10 +21,10 @@ export interface Projection {
   config: MapConfig;
   geoToLocal(p: LonLat): [number, number];
   localToGeo(x: number, y: number): LonLat;
-  /** Гео → мир (Y на юг). */
+  /** Гео → мир (Y на юг), со спрямлением. */
   geoToWorld(p: LonLat): [number, number];
   worldToGeo(X: number, Y: number): LonLat;
-  /** Локальный масштаб мира в точке (игровых единиц на реальный метр). */
+  /** Локальный масштаб мира в точке (игровых единиц на реальный метр; спрямление не учтено). */
   scaleAtWorld(X: number, Y: number): number;
   scaleAtGeo(p: LonLat): number;
   /** Реальное расстояние от центра для точки мира. */
@@ -74,12 +76,52 @@ export function unwarpRadius(rw: number, radius: number, power: number): number 
   return r;
 }
 
-export function createProjection(config: MapConfig): Projection {
+/** Поле спрямления: смещение мировой точки (билинейная интерполяция, вне сетки — ноль). */
+export type ShiftField = (X: number, Y: number) => [number, number];
+
+export function createShiftField(grid: StraightenGrid): ShiftField {
+  const { x0, y0, cell, nx, ny, unit } = grid;
+  const bytes = Uint8Array.from(atob(grid.data), (c) => c.charCodeAt(0));
+  const view = new DataView(bytes.buffer);
+  const d = new Float64Array(nx * ny * 2);
+  for (let i = 0; i < d.length; i++) d[i] = view.getInt16(i * 2, true) * unit;
+  return (X, Y) => {
+    const fx = (X - x0) / cell;
+    const fy = (Y - y0) / cell;
+    const i = Math.floor(fx);
+    const j = Math.floor(fy);
+    if (i < 0 || j < 0 || i >= nx - 1 || j >= ny - 1) return [0, 0];
+    const tx = fx - i;
+    const ty = fy - j;
+    const k = (j * nx + i) * 2;
+    const m = k + nx * 2;
+    const w00 = (1 - tx) * (1 - ty);
+    const w01 = tx * (1 - ty);
+    const w10 = (1 - tx) * ty;
+    const w11 = tx * ty;
+    return [
+      d[k]! * w00 + d[k + 2]! * w01 + d[m]! * w10 + d[m + 2]! * w11,
+      d[k + 1]! * w00 + d[k + 3]! * w01 + d[m + 1]! * w10 + d[m + 3]! * w11,
+    ];
+  };
+}
+
+/**
+ * Проекция карты. straighten — поле спрямления; без него улицы гнутся дугами (радиальное
+ * сжатие), это удобно только для сравнения и тестов.
+ */
+export function createProjection(config: MapConfig, straighten?: StraightenGrid): Projection {
   const { lon: lon0, lat: lat0 } = config.origin;
   const mpd = metersPerDegree(lat0);
   const { radius, power, extent } = config.warp;
   const { linearUpTo, linearScale, power: hPower } = config.heights;
   const zones = [...config.zones].sort((a, b) => a.radius - b.radius);
+  if (straighten && (straighten.warp.radius !== radius || straighten.warp.power !== power)) {
+    throw new Error(
+      'Поле спрямления посчитано для других параметров сжатия: osm_tool.py straighten',
+    );
+  }
+  const shift = straighten ? createShiftField(straighten) : null;
 
   const geoToLocal = (p: LonLat): [number, number] => [
     (p[0] - lon0) * mpd.lon,
@@ -99,13 +141,32 @@ export function createProjection(config: MapConfig): Projection {
     geoToWorld(p) {
       const [x, y] = geoToLocal(p);
       const s = tangentialScale(Math.hypot(x, y), radius, power);
-      return [x * s, -y * s];
+      const X = x * s;
+      const Y = -y * s;
+      if (!shift) return [X, Y];
+      const [dx, dy] = shift(X, Y);
+      return [X + dx, Y + dy];
     },
     worldToGeo(X, Y) {
-      const rw = Math.hypot(X, Y);
+      // Сначала снимаем спрямление: ищем u + D(u) = (X, Y) простой итерацией
+      // (поле плавное, сходится за несколько шагов), потом — радиальное сжатие.
+      let u = X;
+      let v = Y;
+      if (shift) {
+        for (let i = 0; i < 50; i++) {
+          const [dx, dy] = shift(u, v);
+          const nu = X - dx;
+          const nv = Y - dy;
+          const done = Math.abs(nu - u) + Math.abs(nv - v) < 1e-7;
+          u = nu;
+          v = nv;
+          if (done) break;
+        }
+      }
+      const rw = Math.hypot(u, v);
       if (rw === 0) return [lon0, lat0];
       const k = unwarpRadius(rw, radius, power) / rw;
-      return localToGeo(X * k, -Y * k);
+      return localToGeo(u * k, -v * k);
     },
     scaleAtWorld(X, Y) {
       return scaleAtReal(realRadiusOfWorld(X, Y));

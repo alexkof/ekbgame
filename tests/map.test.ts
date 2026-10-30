@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS } from '../src/map/data';
+import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS, MAP_STRAIGHTEN } from '../src/map/data';
 import { compileModel } from '../src/map/model';
 import {
   createProjection,
@@ -8,26 +8,49 @@ import {
   unwarpRadius,
   warpRadius,
 } from '../src/map/projection';
+import { nearestNode, pathLength, shortestPath } from '../src/map/roads';
 import { KIND_INFO } from '../src/map/style';
 import type { LonLat } from '../src/map/types';
 import { buildWorld, pointInRing, splitByScale } from '../src/map/world';
 
-const P = createProjection(MAP_CONFIG);
+const P = createProjection(MAP_CONFIG, MAP_STRAIGHTEN);
+/** Только радиальное сжатие, без спрямления. */
+const P0 = createProjection(MAP_CONFIG);
 const { radius, power, extent } = MAP_CONFIG.warp;
 
 describe('проекция', () => {
-  it('гео → мир → гео возвращает исходную точку', () => {
+  it('гео → мир → гео возвращает исходную точку (и со спрямлением, и без)', () => {
     const points: LonLat[] = [
       [MAP_CONFIG.origin.lon, MAP_CONFIG.origin.lat],
       [60.5907, 56.8436], // башня «Исеть»
       [60.6053, 56.8585], // вокзал
+      [60.6255, 56.8395], // Луначарского — Ленина
       [60.47, 56.79], // окраина
     ];
-    for (const p of points) {
-      const [X, Y] = P.geoToWorld(p);
-      const [lon, lat] = P.worldToGeo(X, Y);
-      expect(lon).toBeCloseTo(p[0], 7);
-      expect(lat).toBeCloseTo(p[1], 7);
+    for (const proj of [P, P0]) {
+      for (const p of points) {
+        const [X, Y] = proj.geoToWorld(p);
+        const [lon, lat] = proj.worldToGeo(X, Y);
+        expect(lon).toBeCloseTo(p[0], 7);
+        expect(lat).toBeCloseTo(p[1], 7);
+      }
+    }
+  });
+
+  it('поле спрямления посчитано для текущих параметров сжатия и плавное', () => {
+    expect(MAP_STRAIGHTEN.warp).toEqual({ radius, power });
+    // Спрямление сдвигает точки, но не переворачивает и не рвёт карту: соседние точки
+    // остаются соседними (локальное растяжение в разумных пределах).
+    for (let x = -3000; x <= 3000; x += 137) {
+      for (let y = -3000; y <= 3000; y += 137) {
+        const g = P0.worldToGeo(x, y);
+        const a = P.geoToWorld(g);
+        const b = P.geoToWorld(P0.worldToGeo(x + 10, y));
+        const c = P.geoToWorld(P0.worldToGeo(x, y + 10));
+        const det = ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 100;
+        expect(det, `${x}, ${y}`).toBeGreaterThan(0.5);
+        expect(det, `${x}, ${y}`).toBeLessThan(1.6);
+      }
     }
   });
 
@@ -117,9 +140,7 @@ describe('данные карты', () => {
   });
 
   it('слои содержат улицы, воду, трамвай и метро', () => {
-    expect(MAP_LAYERS.streets.features.some((f) => f.properties.name === 'проспект Ленина')).toBe(
-      true,
-    );
+    expect(MAP_LAYERS.roads.streets.some((s) => s.name === 'проспект Ленина')).toBe(true);
     expect(MAP_LAYERS.water.features.some((f) => f.properties.name === 'Городской пруд')).toBe(
       true,
     );
@@ -159,5 +180,114 @@ describe('мир', () => {
     expect(runs.length).toBeGreaterThan(1);
     expect(runs[0]!.pts[0]).toEqual(pts[0]);
     expect(runs[runs.length - 1]!.pts.at(-1)).toEqual(pts[pts.length - 1]);
+  });
+});
+
+describe('граф улиц', () => {
+  const roads = MAP_LAYERS.roads;
+  const world = buildWorld(P, MAP_LAYERS, MAP_OBJECTS);
+  const xy = world.roads.nodes;
+
+  /** Название улицы, по которой идёт линия (по её первому отрезку). */
+  const streetOf = (nodes: number[]) =>
+    roads.streets.find((s) =>
+      s.nodes.some(
+        (n, i) => n === nodes[0] && (s.nodes[i + 1] === nodes[1] || s.nodes[i - 1] === nodes[1]),
+      ),
+    )?.name;
+  const angle = (nodes: number[]) => {
+    const a = xy[nodes[0]!]!;
+    const b = xy[nodes[nodes.length - 1]!]!;
+    return ((Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI + 180) % 180;
+  };
+  const angleDiff = (a: number, b: number) => {
+    const d = Math.abs(a - b) % 180;
+    return Math.min(d, 180 - d);
+  };
+
+  it('ссылки на узлы и группы корректны', () => {
+    const n = roads.nodes.length;
+    for (const s of roads.streets) {
+      expect(s.nodes.length).toBeGreaterThanOrEqual(2);
+      for (const k of s.nodes) expect(k >= 0 && k < n).toBe(true);
+    }
+    for (const l of roads.lines) {
+      expect(roads.groups[l.group]).toBeDefined();
+      for (const k of l.nodes) expect(k >= 0 && k < n).toBe(true);
+    }
+  });
+
+  it('прямые улицы на карте прямые: узлы линии лежат на одной прямой', () => {
+    for (const l of roads.lines) {
+      const a = xy[l.nodes[0]!]!;
+      const b = xy[l.nodes[l.nodes.length - 1]!]!;
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      for (const k of l.nodes) {
+        const p = xy[k]!;
+        const off = ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / len;
+        expect(Math.abs(off), streetOf(l.nodes)).toBeLessThan(0.1);
+      }
+    }
+  });
+
+  it('линии одной группы параллельны, перпендикулярные группы перпендикулярны', () => {
+    const dir = roads.groups.map((_, g) => {
+      const l = roads.lines.find((x) => x.group === g);
+      return l ? angle(l.nodes) : NaN;
+    });
+    for (const l of roads.lines) {
+      expect(angleDiff(angle(l.nodes), dir[l.group]!), streetOf(l.nodes)).toBeLessThan(0.02);
+    }
+    roads.groups.forEach((g, i) => {
+      if (g.perpendicular === undefined) return;
+      expect(Math.abs(angleDiff(dir[i]!, dir[g.perpendicular]!) - 90)).toBeLessThan(0.02);
+    });
+  });
+
+  it('Московская, 8 Марта, Луначарского, Восточная — в одной группе параллельных', () => {
+    const groupOf = (name: string) =>
+      roads.lines.filter((l) => streetOf(l.nodes) === name).map((l) => l.group);
+    const lunacharskogo = groupOf('улица Луначарского');
+    expect(lunacharskogo.length).toBeGreaterThan(0);
+    const g = lunacharskogo[0]!;
+    for (const name of ['Московская улица', 'улица 8 Марта', 'Восточная улица']) {
+      expect(groupOf(name), name).toContain(g);
+    }
+    const lenina = groupOf('проспект Ленина');
+    expect(lenina).toContain(roads.groups[g]!.perpendicular);
+  });
+
+  it('граф связный, путь по улицам находится', () => {
+    // Все узлы центра и срединной зоны достижимы от Плотинки (оторванными могут быть
+    // только дороги у края карты, к которым не ведут выбранные магистрали).
+    const from = nearestNode(world.roads, 0, 0); // Плотинка
+    const seen = new Set([from]);
+    const stack = [from];
+    while (stack.length) {
+      for (const e of world.roads.edges[stack.pop()!]!) {
+        if (!seen.has(e.to)) {
+          seen.add(e.to);
+          stack.push(e.to);
+        }
+      }
+    }
+    xy.forEach(([x, y], i) => {
+      if (P.realRadiusOfWorld(x, y) < 4500) expect(seen.has(i), `узел ${i}`).toBe(true);
+    });
+    expect(seen.size / xy.length).toBeGreaterThan(0.85);
+
+    const to = nearestNode(world.roads, ...P.geoToWorld([60.6053, 56.8585])); // вокзал
+    const straight = Math.hypot(
+      ...([0, 1].map(
+        (i) => P.geoToLocal(roads.nodes[to]!)[i]! - P.geoToLocal(roads.nodes[from]!)[i]!,
+      ) as [number, number]),
+    );
+    for (const mode of ['walk', 'car'] as const) {
+      const path = shortestPath(world.roads, from, to, mode);
+      expect(path, mode).not.toBeNull();
+      const len = pathLength(world.roads, path!);
+      expect(len).toBeGreaterThanOrEqual(straight);
+      expect(len).toBeLessThan(straight * 2);
+    }
   });
 });

@@ -53,10 +53,65 @@ export interface FeatureCollection<G extends Geometry = Geometry, P = Record<str
   features: Feature<G, P>[];
 }
 
-export interface StreetProps {
+/**
+ * Граф улиц (layers/roads.json, строит scripts/map/roads.py). Узлы — перекрёстки, концы и
+ * изломы; улица — цепочка узлов. Две улицы с общим узлом пересекаются, поэтому граф готов для
+ * поиска пути (roads.ts). Подробно — docs/MAP.md, «Граф улиц».
+ */
+export interface RoadNetwork {
+  nodes: LonLat[];
+  streets: RoadStreet[];
+  /** Прямые участки: узлы линии на карте лежат на одной прямой. */
+  lines: RoadLine[];
+  /** Группы параллельных линий. */
+  groups: RoadGroup[];
+}
+
+export interface RoadStreet {
   name: string;
   /** 1 — проспект/магистраль, 2 — улица, 3 — малая улица. */
   rank: 1 | 2 | 3;
+  /** Класс дороги в OSM: primary, secondary, tertiary… */
+  class: string;
+  /** Одностороннее движение: 1 — в порядке узлов, −1 — против. */
+  oneway?: 1 | -1;
+  /** По улице идёт трамвай. */
+  tram?: boolean;
+  /** Индексы узлов в RoadNetwork.nodes. */
+  nodes: number[];
+}
+
+export interface RoadLine {
+  /** Индекс группы в RoadNetwork.groups: линии одной группы параллельны. */
+  group: number;
+  nodes: number[];
+}
+
+export interface RoadGroup {
+  /** Реальное направление, градусы от севера по часовой (0…180). */
+  azimuth: number;
+  /** Улицы группы (для читаемости файла). */
+  streets: string[];
+  /** Группа, которой эта строго перпендикулярна. */
+  perpendicular?: number;
+}
+
+/**
+ * Поле спрямления (layers/straighten.json, считает scripts/map/straighten.py): смещение мировых
+ * координат после радиального сжатия, после которого прямые улицы прямые и параллельные.
+ */
+export interface StraightenGrid {
+  /** Параметры сжатия, для которых посчитано поле (должны совпадать с MapConfig.warp). */
+  warp: { radius: number; power: number };
+  x0: number;
+  y0: number;
+  cell: number;
+  nx: number;
+  ny: number;
+  /** Единица хранения смещений, м. */
+  unit: number;
+  /** base64 Int16 little-endian: по строкам сетки пары dx, dy. */
+  data: string;
 }
 export interface WaterProps {
   kind: string;

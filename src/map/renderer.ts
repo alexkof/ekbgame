@@ -51,6 +51,8 @@ interface Box {
 }
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+/** Цвета групп параллельных улиц в режиме разработчика. */
+const GROUP_COLORS = ['#d6336c', '#1c7ed6', '#2b8a3e', '#e8590c', '#7048e8', '#0b7285', '#a61e4d'];
 
 export class MapRenderer {
   readonly view: ViewParams;
@@ -538,50 +540,48 @@ export class MapRenderer {
       if (!s.name || (s.rank === 3 && z < 0.5)) continue;
       const text = shortStreet(s.name);
       const tw = ctx.measureText(text).width;
-      // Самый длинный видимый отрезок линии.
-      let best: [Pt, Pt] | null = null;
-      let bestLen = 0;
+      // Видимые прямые участки улицы, обрезанные краем экрана, от длинных к коротким. У
+      // спрямлённой улицы узлы стоят на каждом перекрёстке, поэтому отрезки без поворота сливаются.
+      const stretches: [Pt, Pt, number][] = [];
       for (const run of s.runs) {
-        for (let i = 1; i < run.pts.length; i++) {
-          const a = cam.planeToScreen(run.pts[i - 1]![0], run.pts[i - 1]![1] * t);
-          const b = cam.planeToScreen(run.pts[i]![0], run.pts[i]![1] * t);
-          const mx = (a[0] + b[0]) / 2;
-          const my = (a[1] + b[1]) / 2;
-          if (mx < 20 || my < 20 || mx > cam.width - 20 || my > cam.height - 20) continue;
-          const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-          if (len > bestLen) {
-            bestLen = len;
-            best = [a, b];
-          }
+        const pts = run.pts.map((p) => cam.planeToScreen(p[0], p[1] * t));
+        let start = 0;
+        for (let i = 1; i < pts.length; i++) {
+          if (i < pts.length - 1 && !turns(pts[i - 1]!, pts[i]!, pts[i + 1]!)) continue;
+          const seg = clipSegment(pts[start]!, pts[i]!, 20, 20, cam.width - 20, cam.height - 20);
+          start = i;
+          if (!seg) continue;
+          const len = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]);
+          if (len >= tw + 24) stretches.push([seg[0], seg[1], len]);
         }
       }
-      if (!best || bestLen < tw + 24) continue;
-      const [a, b] = best;
-      const mx = (a[0] + b[0]) / 2;
-      const my = (a[1] + b[1]) / 2;
+      stretches.sort((p, q) => q[2] - p[2]);
       const prev = done.get(s.name) ?? [];
-      if (prev.some((p) => Math.hypot(p[0] - mx, p[1] - my) < 260)) continue;
-      let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-      if (ang > Math.PI / 2) ang -= Math.PI;
-      if (ang < -Math.PI / 2) ang += Math.PI;
-      const ext = Math.abs(Math.cos(ang)) * tw + 8;
-      const exty = Math.abs(Math.sin(ang)) * tw + 12;
-      if (
-        !this.placeBox(boxes, {
-          x0: mx - ext / 2,
-          y0: my - exty / 2,
-          x1: mx + ext / 2,
-          y1: my + exty / 2,
-        })
-      )
-        continue;
-      prev.push([mx, my]);
-      done.set(s.name, prev);
-      ctx.save();
-      ctx.translate(mx, my);
-      ctx.rotate(ang);
-      this.haloText(text, 0, 0, STYLE.label.street, STYLE.label.halo);
-      ctx.restore();
+      // Подпись — посередине участка, а если там занято другой подписью — ближе к краям.
+      placing: for (const [a, b, len] of stretches.slice(0, 3)) {
+        let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        if (ang > Math.PI / 2) ang -= Math.PI;
+        if (ang < -Math.PI / 2) ang += Math.PI;
+        const ext = Math.abs(Math.cos(ang)) * tw + 8;
+        const exty = Math.abs(Math.sin(ang)) * tw + 12;
+        const room = (len - tw - 16) / (2 * len);
+        for (const f of [0, -0.5, 0.5, -0.9, 0.9]) {
+          const u = 0.5 + f * room;
+          const mx = a[0] + (b[0] - a[0]) * u;
+          const my = a[1] + (b[1] - a[1]) * u;
+          if (prev.some((p) => Math.hypot(p[0] - mx, p[1] - my) < 260)) continue;
+          const box = { x0: mx - ext / 2, y0: my - exty / 2, x1: mx + ext / 2, y1: my + exty / 2 };
+          if (!this.placeBox(boxes, box)) continue;
+          prev.push([mx, my]);
+          done.set(s.name, prev);
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(ang);
+          this.haloText(text, 0, 0, STYLE.label.street, STYLE.label.halo);
+          ctx.restore();
+          break placing;
+        }
+      }
     }
   }
 
@@ -686,6 +686,24 @@ export class MapRenderer {
       ctx.arc(0, 0, rw, 0, Math.PI * 2);
       ctx.stroke();
     }
+    // Граф улиц: прямые линии цветом своей группы параллельных, узлы — точками.
+    const roads = this.world.roads;
+    ctx.lineWidth = 3 * px;
+    for (const line of roads.network.lines) {
+      ctx.strokeStyle = GROUP_COLORS[line.group % GROUP_COLORS.length]!;
+      ctx.beginPath();
+      line.nodes.forEach((n, i) => {
+        const [x, y] = roads.nodes[n]!;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#333';
+    roads.nodes.forEach(([x, y], i) => {
+      if (roads.edges[i]!.length === 2) return;
+      ctx.fillRect(x - 2 * px, y - 2 * px, 4 * px, 4 * px);
+    });
     ctx.fillStyle = '#c0392b';
     for (const o of this.world.objects) {
       ctx.beginPath();
@@ -752,6 +770,42 @@ function addRing(path: Path2D, ring: Pt[], positive = false) {
   }
   pts.forEach((p, i) => (i === 0 ? path.moveTo(p[0], p[1]) : path.lineTo(p[0], p[1])));
   path.closePath();
+}
+
+/** Поворачивает ли линия в точке b больше чем на ~1,5°. */
+function turns(a: Pt, b: Pt, c: Pt): boolean {
+  const ux = b[0] - a[0];
+  const uy = b[1] - a[1];
+  const vx = c[0] - b[0];
+  const vy = c[1] - b[1];
+  return Math.abs(ux * vy - uy * vx) > 0.026 * Math.hypot(ux, uy) * Math.hypot(vx, vy);
+}
+
+/** Часть отрезка внутри прямоугольника (Лианг — Барски) или null. */
+function clipSegment(a: Pt, b: Pt, x0: number, y0: number, x1: number, y1: number) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  let t0 = 0;
+  let t1 = 1;
+  for (const [p, q] of [
+    [-dx, a[0] - x0],
+    [dx, x1 - a[0]],
+    [-dy, a[1] - y0],
+    [dy, y1 - a[1]],
+  ] as const) {
+    if (p === 0) {
+      if (q < 0) return null;
+      continue;
+    }
+    const r = q / p;
+    if (p < 0) t0 = Math.max(t0, r);
+    else t1 = Math.min(t1, r);
+    if (t0 > t1) return null;
+  }
+  return [
+    [a[0] + dx * t0, a[1] + dy * t0],
+    [a[0] + dx * t1, a[1] + dy * t1],
+  ] as [Pt, Pt];
 }
 
 function shortStreet(name: string): string {

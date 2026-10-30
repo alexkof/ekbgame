@@ -1,11 +1,19 @@
-import type { FeatureCollection, MapConfig, ModelData, ObjectProps, PolygonGeom } from '../types';
+import type {
+  FeatureCollection,
+  MapConfig,
+  ModelData,
+  ObjectProps,
+  PolygonGeom,
+  StraightenGrid,
+} from '../types';
 import type { MapLayers } from '../world';
 import config from './config.json';
 import districts from './layers/districts.geo.json';
 import land from './layers/land.geo.json';
 import metro from './layers/metro.geo.json';
 import rail from './layers/rail.geo.json';
-import streets from './layers/streets.geo.json';
+import roads from './layers/roads.json';
+import straighten from './layers/straighten.json';
 import tram from './layers/tram.geo.json';
 import water from './layers/water.geo.json';
 import objects from './objects.geo.json';
@@ -16,8 +24,11 @@ import objects from './objects.geo.json';
  */
 export const MAP_CONFIG = config as MapConfig;
 
+/** Поле спрямления улиц — передаётся в createProjection вместе с MAP_CONFIG. */
+export const MAP_STRAIGHTEN = straighten as StraightenGrid;
+
 export const MAP_LAYERS = {
-  streets,
+  roads,
   tram,
   rail,
   metro,

@@ -1,5 +1,6 @@
 import { nextRandom, type RngState } from '../core/rng';
 import type { Projection } from './projection';
+import { buildRoadGraph, type RoadGraph } from './roads';
 import type {
   FeatureCollection,
   LandProps,
@@ -10,7 +11,7 @@ import type {
   ObjectProps,
   PointGeom,
   PolygonGeom,
-  StreetProps,
+  RoadNetwork,
   WaterProps,
   ZoneId,
 } from './types';
@@ -77,7 +78,7 @@ export interface TreeInstance {
 }
 
 export interface MapLayers {
-  streets: FeatureCollection<LineGeom, StreetProps>;
+  roads: RoadNetwork;
   tram: FeatureCollection<LineGeom, object>;
   rail: FeatureCollection<LineGeom, object>;
   metro: FeatureCollection<LineGeom | PointGeom, MetroProps>;
@@ -88,7 +89,10 @@ export interface MapLayers {
 
 export interface World {
   projection: Projection;
+  /** Улицы для отрисовки (из графа улиц). */
   streets: WorldLine[];
+  /** Граф улиц для перемещения машин и персонажей. */
+  roads: RoadGraph;
   tram: WorldLine[];
   rail: WorldLine[];
   metroLines: WorldLine[];
@@ -236,13 +240,20 @@ export function buildWorld(
       f.geometry.type === 'Point',
   );
 
+  const roads = buildRoadGraph(layers.roads, P);
+  const streets = layers.roads.streets.map((s): WorldLine => {
+    const pts = s.nodes.map((i) => roads.nodes[i]!);
+    return { name: s.name, rank: s.rank, runs: splitByScale(pts, scaleAt), bbox: bboxOf(pts) };
+  });
+
   const worldObjects = objects.features.map((f) => buildObject(P, f));
   const land = polygons(layers.land);
   const water = polygons(layers.water);
 
   return {
     projection,
-    streets: lines(layers.streets, (p) => [(p as StreetProps).name, (p as StreetProps).rank]),
+    streets,
+    roads,
     tram: lines(layers.tram, () => ['', 0]),
     rail: lines(layers.rail, () => ['', 0]),
     metroLines: lines({ type: 'FeatureCollection', features: metroLines }, () => ['', 0]),

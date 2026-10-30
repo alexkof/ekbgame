@@ -1,4 +1,4 @@
-import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS } from '../src/map/data';
+import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS, MAP_STRAIGHTEN } from '../src/map/data';
 import { imagesOf, loadModelImages } from '../src/map/images';
 import { MapView } from '../src/map/mapView';
 import {
@@ -66,7 +66,7 @@ const VARIANTS = [
   // Картинки из фото не хранятся в git (см. lab/README.md): без них вариант не показываем.
 ].filter((v) => MODELS[v.id] && imagesOf(MODELS[v.id]!).every((name) => IMAGE_URLS[name]));
 
-const projection = createProjection(MAP_CONFIG);
+const projection = createProjection(MAP_CONFIG, MAP_STRAIGHTEN);
 const cam = MAP_CONFIG.camera;
 const VIEW: ViewParams = {
   a: cam.lean * cam.heightFactor,
