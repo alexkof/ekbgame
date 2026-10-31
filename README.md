@@ -26,5 +26,7 @@ npm run build    # сборка в dist/
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — стек, структура кода, публикация.
 - [docs/MAP.md](docs/MAP.md) — карта: проекция, масштаб центра и окраин, данные, модели объектов.
+- [docs/ART.md](docs/ART.md) — рисунки зданий: OSM → модель → каркас → генератор → карта;
+  [art/](art/) — здания, каркасы и запросы для рисования.
 - [docs/PROTOTYPE.md](docs/PROTOTYPE.md) — разбор прототипа: механики, баланс, техдолг.
 - [docs/QUESTIONS.md](docs/QUESTIONS.md) — открытые вопросы и принятые решения.

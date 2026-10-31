@@ -9,5 +9,9 @@
 - Карта — `docs/MAP.md`. В `src/map/data/` объекты и модели правятся вручную, а `layers/*`
   генерируются `scripts/map/osm_tool.py` из среза OSM `scripts/map/osm/ekb.osm.pbf` (не править
   руками — перезапишутся; после правки графа улиц `roads.json` — `osm_tool.py straighten`).
+- Рисунки зданий — `docs/ART.md`. В `art/<id>/` README, каркасы и `frame.json` генерирует
+  `scripts/art/art.py prepare` (заметки и фото — в `info.json`); после правки модели здания —
+  снова `prepare` (тесты проверяют отпечаток геометрии). Рисунки из `drawn/` ставит на карту
+  CI (`art.yml`) или `art.py import <id>`.
 - Одна ветка `main`; каждый push в неё публикуется на https://alexkof.github.io/ekbgame/
   (`.github/workflows/deploy.yml`).

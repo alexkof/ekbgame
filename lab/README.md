@@ -56,3 +56,7 @@ node lab/scripts/render.cjs lab/work/ai-kit 0 city-hall-procedural:color:8 city-
 Скрипт подгоняет размер, выравнивает сдвиг и масштаб по контурам (генераторы слегка
 «гуляют»), вырезает фон по силуэту модели и пишет `lab/models/city-hall-art/art.webp` и
 `lab/models/city-hall-art.json`. В лаборатории появляется вариант F.
+
+Вариант F вырос в методику рисунков зданий для игры: модель из OSM, каркас и запрос для
+генератора, автоматический импорт рисунка — [docs/ART.md](../docs/ART.md), `scripts/art/`,
+`art/`. Скрипты `prepare_art.py` и `import_art.py` здесь — первая версия для мэрии.

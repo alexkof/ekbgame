@@ -46,6 +46,12 @@ export class MapView {
     this.invalidate();
   }
 
+  /** Перерисовать модели заново (загрузились рисунки или текстуры). */
+  refreshModels(): void {
+    this.renderer.clearModelCache();
+    this.invalidate();
+  }
+
   getState(): RenderState {
     return this.state;
   }

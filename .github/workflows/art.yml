@@ -1,0 +1,57 @@
+name: Рисунки зданий
+
+# Рисунок, загруженный в art/<id>/drawn/ (или выбранный в art/<id>/info.json), совмещается
+# с каркасом, фон вырезается, и спрайт встаёт на карту: коммит с src/map/data/models/<id>/art.webp
+# и полем "art" в модели, затем публикация сайта. Методика — docs/ART.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'art/*/drawn/**'
+      - 'art/*/info.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: art
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # порядок рисунков — по истории git
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/art/requirements.txt
+      - run: pip install -r scripts/art/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Поставить новые рисунки на карту
+        run: python scripts/art/art.py import --new
+      - name: Коммит и публикация
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -A src/map/data/models art
+          if git diff --cached --quiet; then
+            echo "Новых рисунков нет"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Рисунки зданий: на карту ($(git diff --cached --name-only -- 'src/map/data/models/*/art.webp' | cut -d/ -f5 | paste -sd, -))"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          # Коммит от GITHUB_TOKEN не запускает другие workflow — публикацию запускаем сами.
+          gh workflow run deploy.yml --ref main

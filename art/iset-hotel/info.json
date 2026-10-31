@@ -1,0 +1,52 @@
+{
+  "notes": "Конструктивизм (1930-е): здание-«серп» белого цвета, горизонтальные ленты окон и белые простенки, плоская крыша, на первом этаже — витрины. Вогнутая сторона обращена на север (во двор), выпуклая — на юг, к площади.",
+  "photos": [
+    {
+      "title": "Викисклад: Views from Vysotsky skyscraper-2021-28.JPG",
+      "url": "https://commons.wikimedia.org/wiki/File:Views_from_Vysotsky_skyscraper-2021-28.JPG"
+    },
+    {
+      "title": "Викисклад: Городок чекистов.jpg",
+      "url": "https://commons.wikimedia.org/wiki/File:%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D0%BE%D0%BA_%D1%87%D0%B5%D0%BA%D0%B8%D1%81%D1%82%D0%BE%D0%B2.jpg"
+    },
+    {
+      "title": "Викисклад: категория «Gorodok Chekistov»",
+      "url": "https://commons.wikimedia.org/wiki/Category:Gorodok_Chekistov"
+    },
+    {
+      "title": "Википедия: Городок чекистов",
+      "url": "https://ru.wikipedia.org/wiki/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D0%BE%D0%BA_%D1%87%D0%B5%D0%BA%D0%B8%D1%81%D1%82%D0%BE%D0%B2"
+    },
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.620987%2C56.840799&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.840799%2C60.620987"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.840799,60.620987&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D0%93%D0%BE%D1%81%D1%82%D0%B8%D0%BD%D0%B8%D1%86%D0%B0%20%C2%AB%D0%98%D1%81%D0%B5%D1%82%D1%8C%C2%BB%20%D0%BF%D1%80.%20%D0%9B%D0%B5%D0%BD%D0%B8%D0%BD%D0%B0%2C%2069/1%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: way/38581889",
+      "url": "https://www.openstreetmap.org/way/38581889"
+    }
+  ],
+  "osm_tags": {
+    "name": "Гостиница «Исеть»",
+    "addr:street": "проспект Ленина",
+    "addr:housenumber": "69/1",
+    "start_date": "1933",
+    "architect": "Вениамин Дмитриевич Соколов;Иван Павлович Антонов;Арсений Михайлович Тумбасов",
+    "building": "hotel",
+    "building:levels": "10",
+    "height": "30",
+    "wikidata": "Q4145398"
+  }
+}

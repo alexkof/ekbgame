@@ -14,7 +14,7 @@ export function getImage(name: string): HTMLImageElement | null {
 
 /** Все картинки, на которые ссылается модель. */
 export function imagesOf(model: ModelData): string[] {
-  const names: string[] = [];
+  const names: string[] = model.art ? [model.art.image] : [];
   for (const p of model.parts) {
     if (p.type === 'billboard' || p.type === 'image') names.push(p.image);
     if (p.type === 'prism') for (const s of p.skins ?? []) names.push(s.image);

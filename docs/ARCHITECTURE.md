@@ -9,7 +9,8 @@
 - **Vitest** — модульные тесты, **Prettier** — форматирование.
 - Хостинг — **GitHub Pages**, сборка и публикация — **GitHub Actions**.
 - Карта — собственный движок на **Canvas 2D** (`src/map/`, см. [MAP.md](MAP.md)); данные — из
-  OpenStreetMap (скрипт `scripts/map/osm_tool.py`, Python).
+  OpenStreetMap (скрипт `scripts/map/osm_tool.py`, Python); облик зданий — рисунки по
+  каркасу (`scripts/art/`, см. [ART.md](ART.md)).
 - UI-фреймворк пока не выбран.
 
 ## Слои
@@ -47,6 +48,10 @@ Workflow [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml): `npm
 `actions/deploy-pages`. Если проверки не прошли, сайт не обновляется.
 
 Внизу страницы показаны коммит и время сборки — видно, какая версия открыта.
+
+Рисунки зданий: workflow [`.github/workflows/art.yml`](../.github/workflows/art.yml) запускается,
+когда в `art/<id>/drawn/` загружен рисунок, ставит его на карту (`scripts/art/art.py import
+--new`), коммитит результат в `main` и запускает публикацию (см. [ART.md](ART.md)).
 
 ### Однократная настройка
 

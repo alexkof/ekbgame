@@ -1,5 +1,13 @@
 import { applyAction, createInitialState, type GameAction, type GameState } from '../core';
-import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS, MAP_STRAIGHTEN } from '../map/data';
+import {
+  MAP_CONFIG,
+  MAP_IMAGE_URLS,
+  MAP_LAYERS,
+  MAP_MODELS,
+  MAP_OBJECTS,
+  MAP_STRAIGHTEN,
+} from '../map/data';
+import { loadModelImages } from '../map/images';
 import { MapView } from '../map/mapView';
 import { createProjection } from '../map/projection';
 import { KIND_INFO } from '../map/style';
@@ -41,6 +49,8 @@ export function mountMapScreen(root: HTMLElement): void {
     selectedId: null,
     debug: false,
   });
+  // Рисунки зданий догружаются после первого кадра: до этого модели видны примитивами.
+  void loadModelImages(MAP_MODELS, MAP_IMAGE_URLS).then(() => view.refreshModels());
 
   const dispatch = (action: GameAction) => {
     game = applyAction(game, action);

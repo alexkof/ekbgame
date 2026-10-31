@@ -4,6 +4,7 @@ import type {
   BillboardPart,
   Facade,
   ImagePart,
+  ModelArt,
   ModelData,
   ModelPart,
   SignPart,
@@ -44,6 +45,8 @@ interface Face {
   k: number;
   wall?: Wall;
   gradient?: [string, string];
+  /** Дыры (дворы) в грани-крыше: заливка по правилу even-odd. */
+  holes?: V3[][];
 }
 interface Wall {
   p0: XY;
@@ -112,6 +115,8 @@ export interface CompiledModel {
   /** Самая высокая точка (Z) — над ней ставится подпись. */
   topZ: number;
   bounds: { u0: number; u1: number; v0: number; v1: number };
+  /** Рисунок модели: в цвете рисуется он, а не примитивы. */
+  art?: ModelArt;
 }
 
 // --------------------------------------------------------------- цвета
@@ -259,6 +264,105 @@ function hipRoof(o: XY[], Z0: number, Z1: number): V3[][] {
   ];
 }
 
+/**
+ * Двускатная крыша над четырёхугольником (против часовой): два ската и два щипца-треугольника.
+ * Конёк — вдоль длинной стороны.
+ */
+function gableRoof(o: XY[], Z0: number, Z1: number): { slopes: V3[][]; gables: V3[][] } {
+  const d = (p: XY, q: XY) => Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const [A, B, C, D] = d(o[0]!, o[1]!) >= d(o[1]!, o[2]!) ? o : [o[1]!, o[2]!, o[3]!, o[0]!];
+  const r1: V3 = [(A![0] + D![0]) / 2, (A![1] + D![1]) / 2, Z1];
+  const r2: V3 = [(B![0] + C![0]) / 2, (B![1] + C![1]) / 2, Z1];
+  const at = (p: XY): V3 => [p[0], p[1], Z0];
+  return {
+    slopes: [
+      [at(A!), at(B!), r2, r1],
+      [at(C!), at(D!), r1, r2],
+    ],
+    gables: [
+      [at(B!), at(C!), r2],
+      [at(D!), at(A!), r1],
+    ],
+  };
+}
+
+/**
+ * Контур (против часовой), сдвинутый внутрь на d: каждая сторона параллельна исходной.
+ * null — если при таком сдвиге контур выворачивается (сторона меняет направление).
+ */
+export function insetRing(o: XY[], d: number): XY[] | null {
+  const n = o.length;
+  const normals = o.map((p, i) => {
+    const q = o[(i + 1) % n]!;
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
+    return [-(q[1] - p[1]) / len, (q[0] - p[0]) / len] as XY;
+  });
+  const out = o.map((p, i) => {
+    const n1 = normals[(i + n - 1) % n]!;
+    const n2 = normals[i]!;
+    // Угол: точка на пересечении двух сдвинутых сторон (длина «усика» ограничена).
+    const k = d / Math.max(0.25, 1 + n1[0] * n2[0] + n1[1] * n2[1]);
+    return [p[0] + (n1[0] + n2[0]) * k, p[1] + (n1[1] + n2[1]) * k] as XY;
+  });
+  for (let i = 0; i < n; i++) {
+    const p = o[i]!;
+    const q = o[(i + 1) % n]!;
+    const a = out[i]!;
+    const b = out[(i + 1) % n]!;
+    if ((q[0] - p[0]) * (b[0] - a[0]) + (q[1] - p[1]) * (b[1] - a[1]) <= 0) return null;
+  }
+  return signedArea(out) > 0 ? out : null;
+}
+
+/**
+ * Вальмовая крыша над любым контуром: скаты от стен к плоской вершине — контуру, сдвинутому
+ * внутрь (уклон около 35°). Если контур слишком узкий для такого сдвига, вершина ниже.
+ */
+function insetRoof(o: XY[], Z0: number, Z1: number, rise: number): V3[][] | null {
+  const area = signedArea(o);
+  let perimeter = 0;
+  o.forEach((p, i) => {
+    const q = o[(i + 1) % o.length]!;
+    perimeter += Math.hypot(q[0] - p[0], q[1] - p[1]);
+  });
+  let d = Math.min(rise / 0.7, (0.9 * area) / perimeter);
+  for (let attempt = 0; attempt < 5; attempt++, d /= 2) {
+    const inner = insetRing(o, d);
+    if (!inner) continue;
+    const Zt = Z0 + ((Z1 - Z0) * d) / (rise / 0.7);
+    const faces: V3[][] = o.map((p, i) => {
+      const j = (i + 1) % o.length;
+      return [
+        [p[0], p[1], Z0],
+        [o[j]![0], o[j]![1], Z0],
+        [inner[j]![0], inner[j]![1], Zt],
+        [inner[i]![0], inner[i]![1], Zt],
+      ];
+    });
+    faces.push(inner.map((p) => [p[0], p[1], Zt]));
+    return faces;
+  }
+  return null;
+}
+
+/**
+ * Отпечаток геометрии модели: всё, что влияет на силуэт (контуры, высоты, крыши, купола),
+ * без цветов и фасадов. Рисунок по каркасу годен, пока отпечаток не изменился.
+ */
+export function artGeometryKey(data: ModelData): string {
+  const skip = new Set(['color', 'roof', 'facade', 'floor', 'bays', 'skins', 'text']);
+  const json = JSON.stringify(data.parts, (k, v) => (skip.has(k) ? undefined : v));
+  // FNV-1a, 32 бита — двумя половинами, чтобы случайное совпадение было маловероятным.
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < json.length; i++) {
+    const c = json.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ c, 0x050c5d1f) >>> 0;
+  }
+  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
+}
+
 // --------------------------------------------------------------- сборка
 
 export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
@@ -365,7 +469,19 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
         if (part.facade === 'bays') extra.bays = { ...DEFAULT_BAYS, ...part.bays };
         if (part.skins) extra.skins = part.skins;
         addSolidWalls(o, z0, z1, base, part.facade ?? 'grid', part.floor ?? 3.6, items, extra);
+        // Стены дворов: обход по часовой, чтобы нормали смотрели во двор.
+        const holes = (part.holes ?? []).map((h) => [...ccw(h)].reverse());
+        for (const h of holes) {
+          addSolidWalls(h, z0, z1, base, part.facade ?? 'grid', part.floor ?? 3.6, items, extra);
+        }
         const c = centroid(o);
+        const rise = part.gable ?? part.hip ?? 0;
+        const sorted = (faces: (Face | null)[]) =>
+          faces.filter((f): f is Face => f !== null).sort((a, b) => a.depth - b.depth);
+        const sloped =
+          rise > 0 && !holes.length && (o.length !== 4 || !part.gable)
+            ? insetRoof(o, H(z1), H(z1 + rise), rise)
+            : null;
         if (part.pyramid) {
           const apex: V3 = [c[0], c[1], H(z1 + part.pyramid)];
           const tris: Face[] = [];
@@ -378,23 +494,36 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
           tris.sort((a, b) => a.depth - b.depth);
           items.push(...tris);
           topZ = Math.max(topZ, apex[2]);
-        } else if (part.hip && o.length === 4) {
-          const slopes = hipRoof(o, H(z1), H(z1 + part.hip))
-            .map((pts) => faceFrom(pts, roof))
-            .filter((f): f is Face => f !== null)
-            .sort((a, b) => a.depth - b.depth);
-          items.push(...slopes);
+        } else if (part.gable && o.length === 4 && !holes.length) {
+          const { slopes, gables } = gableRoof(o, H(z1), H(z1 + part.gable));
+          items.push(
+            ...sorted([
+              ...slopes.map((pts) => faceFrom(pts, roof)),
+              ...gables.map((pts) => faceFrom(pts, base)),
+            ]),
+          );
+          topZ = Math.max(topZ, H(z1 + part.gable));
+        } else if (part.hip && o.length === 4 && !holes.length) {
+          items.push(
+            ...sorted(hipRoof(o, H(z1), H(z1 + part.hip)).map((pts) => faceFrom(pts, roof))),
+          );
           topZ = Math.max(topZ, H(z1 + part.hip));
+        } else if (sloped) {
+          items.push(...sorted(sloped.map((pts) => faceFrom(pts, roof))));
+          topZ = Math.max(topZ, H(z1 + rise));
         } else {
           const top = faceFrom(
             o.map((p) => [p[0], p[1], H(z1)] as V3),
             roof,
           );
-          if (top) items.push(top);
+          if (top) {
+            if (holes.length) top.holes = holes.map((h) => h.map((p) => [p[0], p[1], H(z1)] as V3));
+            items.push(top);
+          }
           topZ = Math.max(topZ, H(z1));
         }
         o.forEach((p) => extend(p[0], p[1]));
-        if (z0 < 1) footprints.push({ outline: o, height: z1 + (part.pyramid ?? 0) });
+        if (z0 < 1) footprints.push({ outline: o, height: z1 + (part.pyramid ?? rise) });
         anchor = [c[0], c[1], H(z0)];
         break;
       }
@@ -586,11 +715,18 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
   const size = Math.max(maxX - minX, maxY - minY);
 
   // Габарит в плоскости изображения (на 1 px/м) — для размера спрайта.
+  if (data.art) {
+    const { size, origin, ppm } = data.art;
+    imageBox.u0 = Math.min(imageBox.u0, -origin[0] / ppm);
+    imageBox.u1 = Math.max(imageBox.u1, (size[0] - origin[0]) / ppm);
+    imageBox.v0 = Math.min(imageBox.v0, -origin[1] / ppm);
+    imageBox.v1 = Math.max(imageBox.v1, (size[1] - origin[1]) / ppm);
+  }
   const u0 = Math.min(minX, imageBox.u0);
   const u1 = Math.max(maxX + view.a * topZ, imageBox.u1);
   const v0 = Math.min(-view.t * maxY - view.c * topZ, imageBox.v0);
   const v1 = Math.max(-view.t * minY, imageBox.v1);
-  return {
+  const compiled: CompiledModel = {
     id: data.id,
     name: data.name,
     groups,
@@ -600,6 +736,8 @@ export function compileModel(data: ModelData, view: ViewParams): CompiledModel {
     topZ,
     bounds: { u0, u1, v0, v1 },
   };
+  if (data.art) compiled.art = data.art;
+  return compiled;
 }
 
 // ------------------------------------------------------------- отрисовка
@@ -630,6 +768,20 @@ export function drawModel(
     ctx.closePath();
     ctx.fillStyle = mode === 'color' ? g.color : mode === 'clay' ? '#d9d9d9' : r.normal([0, 0, 1]);
     ctx.fill();
+  }
+
+  // Рисунок заменяет примитивы (только в цвете: каркасы для генератора — по модели).
+  const art = mode === 'color' && m.art ? getImage(m.art.image) : null;
+  if (art && m.art) {
+    const k = ps / m.art.ppm;
+    ctx.drawImage(
+      art,
+      -m.art.origin[0] * k,
+      -m.art.origin[1] * k,
+      m.art.size[0] * k,
+      m.art.size[1] * k,
+    );
+    return;
   }
 
   for (const g of m.groups) {
@@ -680,12 +832,16 @@ function normalColor(view: ViewParams): (n: V3) => string {
 function facePath(r: RenderCtx, f: Face) {
   const { ctx, pu, pv } = r;
   ctx.beginPath();
-  f.pts.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(pu(p), pv(p));
-    else ctx.lineTo(pu(p), pv(p));
-  });
-  ctx.closePath();
+  for (const ring of [f.pts, ...(f.holes ?? [])]) {
+    ring.forEach((p, i) => {
+      if (i === 0) ctx.moveTo(pu(p), pv(p));
+      else ctx.lineTo(pu(p), pv(p));
+    });
+    ctx.closePath();
+  }
 }
+
+const fillRule = (f: Face): CanvasFillRule => (f.holes ? 'evenodd' : 'nonzero');
 
 function drawFace(r: RenderCtx, f: Face) {
   const { ctx, view, ps, pu, pv } = r;
@@ -697,7 +853,7 @@ function drawFace(r: RenderCtx, f: Face) {
         : r.mode === 'normals'
           ? r.normal(f.n)
           : '#ffffff';
-    ctx.fill();
+    ctx.fill(fillRule(f));
     ctx.strokeStyle = r.mode === 'lines' ? '#000000' : (ctx.fillStyle as string);
     ctx.lineWidth = r.mode === 'lines' ? Math.max(1, ps * 0.12) : 0.8;
     ctx.stroke();
@@ -713,7 +869,7 @@ function drawFace(r: RenderCtx, f: Face) {
   } else {
     ctx.fillStyle = f.fill;
   }
-  ctx.fill();
+  ctx.fill(fillRule(f));
   const skin = f.wall?.skin && getImage(f.wall.skin.image);
   if (f.wall?.skin && skin) drawSkin(r, f, f.wall, f.wall.skin, skin);
   else if (f.wall?.facade === 'bays') drawBays(r, f, f.wall);

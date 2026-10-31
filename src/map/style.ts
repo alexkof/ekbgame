@@ -50,4 +50,7 @@ export const KIND_INFO: Record<ObjectKind, { title: string; icon: string; color:
   metro: { title: 'Станция метро', icon: 'Ⓜ️', color: '#d6262b' },
   station: { title: 'Вокзал', icon: '🚉', color: '#6c6f7d' },
   square: { title: 'Площадь', icon: '⬜', color: '#9b8f7a' },
+  building: { title: 'Здание', icon: '🏢', color: '#8c7b6b' },
+  hotel: { title: 'Гостиница', icon: '🏨', color: '#b0703c' },
+  circus: { title: 'Цирк', icon: '🎪', color: '#c43d5a' },
 };

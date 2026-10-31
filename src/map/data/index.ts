@@ -48,3 +48,14 @@ const modelFiles = import.meta.glob<ModelData>('./models/*.json', {
 export const MAP_MODELS: Record<string, ModelData> = Object.fromEntries(
   Object.values(modelFiles).map((m) => [m.id, m]),
 );
+
+const imageFiles = import.meta.glob<string>('./models/**/*.{png,jpg,webp}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+
+/** Картинки моделей (рисунки, текстуры): имя относительно папки моделей → адрес. */
+export const MAP_IMAGE_URLS: Record<string, string> = Object.fromEntries(
+  Object.entries(imageFiles).map(([path, url]) => [path.replace('./models/', ''), url]),
+);

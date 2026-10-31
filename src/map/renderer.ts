@@ -87,6 +87,12 @@ export class MapRenderer {
     this.trees = [...world.trees].sort((a, b) => a.y - b.y);
   }
 
+  /** Сбросить собранные модели и спрайты — например, когда загрузились картинки моделей. */
+  clearModelCache(): void {
+    this.compiled.clear();
+    this.sprites.clear();
+  }
+
   model(id: string): CompiledModel | null {
     let m = this.compiled.get(id);
     if (!m) {

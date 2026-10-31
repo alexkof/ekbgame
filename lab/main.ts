@@ -1,7 +1,15 @@
-import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS, MAP_STRAIGHTEN } from '../src/map/data';
+import {
+  MAP_CONFIG,
+  MAP_IMAGE_URLS,
+  MAP_LAYERS,
+  MAP_MODELS,
+  MAP_OBJECTS,
+  MAP_STRAIGHTEN,
+} from '../src/map/data';
 import { imagesOf, loadModelImages } from '../src/map/images';
 import { MapView } from '../src/map/mapView';
 import {
+  artGeometryKey,
   compileModel,
   drawModel,
   type CompiledModel,
@@ -27,9 +35,12 @@ const labImages = import.meta.glob<string>('./models/**/*.{png,jpg,webp}', {
   query: '?url',
   import: 'default',
 });
-const IMAGE_URLS = Object.fromEntries(
-  Object.entries(labImages).map(([path, url]) => [path.replace('./models/', ''), url]),
-);
+const IMAGE_URLS = {
+  ...MAP_IMAGE_URLS,
+  ...Object.fromEntries(
+    Object.entries(labImages).map(([path, url]) => [path.replace('./models/', ''), url]),
+  ),
+};
 const MODELS: Record<string, ModelData> = {
   ...MAP_MODELS,
   ...Object.fromEntries(Object.values(labModels).map((m) => [m.id, m])),
@@ -309,12 +320,87 @@ radio(
     .map((id) => [MODELS[id]!.name, () => showGuides(id)]),
 );
 
+// ------------------------------------------- каркас для рисунка здания
+
+/** Размеры, которые умеет ChatGPT (gpt-image): каркас сразу в одном из них. */
+const ART_SIZES: [number, number][] = [
+  [1024, 1024],
+  [1536, 1024],
+  [1024, 1536],
+];
+/** Поля вокруг модели, доля стороны холста: генераторы не любят рисовать впритык к краю. */
+const ART_MARGIN = 0.07;
+
+/**
+ * Каркас модели для художника или генератора (scripts/art/render.mjs): модель по центру
+ * холста одного из размеров ChatGPT; рисунок того же размера ляжет на карту пиксель в
+ * пиксель. Рисуется по примитивам, даже если у модели уже есть рисунок.
+ */
+function artGuide(id: string) {
+  const data = MODELS[id];
+  if (!data) throw new Error(`Нет модели ${id}`);
+  const { art: _, ...bare } = data;
+  const m = compileModel(bare, VIEW);
+  const b = m.bounds;
+  const bw = b.u1 - b.u0;
+  const bh = b.v1 - b.v0;
+  let best = { size: ART_SIZES[0]!, ppm: 0 };
+  for (const size of ART_SIZES) {
+    const ppm = Math.min(
+      (size[0] * (1 - 2 * ART_MARGIN)) / bw,
+      (size[1] * (1 - 2 * ART_MARGIN)) / bh,
+    );
+    if (ppm > best.ppm * 1.15) best = { size, ppm };
+  }
+  const [W, H] = best.size;
+  const ppm = Math.round(best.ppm * 1000) / 1000;
+  const origin: [number, number] = [
+    Math.round((W / 2 - ((b.u0 + b.u1) / 2) * ppm) * 10) / 10,
+    Math.round((H / 2 - ((b.v0 + b.v1) / 2) * ppm) * 10) / 10,
+  ];
+  const draw = (mode: RenderMode, background: string | null) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d')!;
+    if (background) {
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.translate(origin[0], origin[1]);
+    drawModel(ctx, m, VIEW, ppm, mode);
+    return canvas.toDataURL('image/png');
+  };
+  return {
+    model: id,
+    size: best.size,
+    ppm,
+    origin,
+    geometry: artGeometryKey(data),
+    camera: MAP_CONFIG.camera,
+    heights: MAP_CONFIG.heights,
+    images: {
+      guide: draw('color', '#ffffff'),
+      lines: draw('lines', '#ffffff'),
+      clay: draw('clay', '#ffffff'),
+      // Силуэт — альфа цветного рисунка без фона.
+      mask: draw('color', null),
+    },
+  };
+}
+
 /** Для автоматических снимков (Playwright). */
 Object.assign(window, {
   lab: {
     setVariant,
     setZoom,
     showTiles,
+    artGuide,
+    /** Показать объект карты крупно (для снимков). */
+    show(objectId: string, zoom: number) {
+      const o = world.objects.find((x) => x.props.id === objectId);
+      if (o) view.flyTo(o.anchor[0], o.anchor[1] * VIEW.t - 15, zoom, false);
+    },
     render(id: string, mode: RenderMode, ppm: number, withGround = false) {
       const r = renderModel(id, ppm, mode, withGround);
       return { url: r.canvas.toDataURL('image/png'), origin: r.origin, ppm };

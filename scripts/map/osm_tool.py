@@ -8,6 +8,8 @@
   roads-geojson <файл>              выгрузить граф улиц в GeoJSON (посмотреть в geojson.io)
   find    [pbf] <lat> <lon> [r_m]   найти объекты OSM рядом с точкой (для поиска id)
   outline [pbf] <w123|r456> ...     контур объекта: в градусах и в метрах от центра
+  building [pbf] <w123|r456> --id <id> [--kind building] [--name …] [--emphasis 1]
+                                    здание из OSM → модель models/<id>.json и объект карты
 
 Без аргумента pbf команды читают срез из репозитория (scripts/map/osm/ekb.osm.pbf), поэтому
 скачивать выгрузку нужно, только чтобы обновить данные OSM. Полная выгрузка области:
@@ -25,6 +27,7 @@ https://download.openstreetmap.fr/extracts/russia/ural_federal_district/
 import argparse
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,6 +38,7 @@ from shapely import geometry as sg
 from shapely import ops
 from shapely import wkb as swkb
 
+import buildings
 import roads
 import straighten
 
@@ -202,7 +206,7 @@ SIMPLIFY_AREA = 4.0  # допуск упрощения контуров, «иг�
 
 # Срез OSM в репозитории: что сохраняем (радиусы — реальные метры от центра).
 SNAPSHOT_RADIUS = EXTENT + 2000  # улицы, рельсы, вода, зелень (с запасом за край карты)
-SNAPSHOT_BUILDINGS = 3000  # здания — для команд find/outline (контуры объектов)
+SNAPSHOT_BUILDINGS = 3000  # здания и их части — для команд find/outline/building
 
 
 def area_kind(tags):
@@ -384,6 +388,12 @@ def write_json(name, obj):
     path = DATA / 'layers' / name
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     return path
+
+
+def prettier(*paths):
+    """Привести JSON к виду, который ждёт npm run check (если установлены зависимости npm)."""
+    if (ROOT / 'node_modules' / '.bin' / 'prettier').exists():
+        subprocess.run(['npx', 'prettier', '--write', '--log-level', 'warn', *map(str, paths)], cwd=ROOT, check=False)
 
 
 def write_layer(name, features, comment):
@@ -674,7 +684,8 @@ def cmd_extract(pbf, out):
     """Срез выгрузки OSM для карты: только нужное и только вокруг города (~3 МБ вместо ~100).
 
     Сохраняются дороги (кроме дворов и тропинок), рельсы, вода, зелень, площади, станции,
-    подписи районов — в радиусе SNAPSHOT_RADIUS; здания — в радиусе SNAPSHOT_BUILDINGS.
+    подписи районов — в радиусе SNAPSHOT_RADIUS; здания и их части (building:part) — в радиусе
+    SNAPSHOT_BUILDINGS.
     Объекты сохраняются целиком, вместе с точками и частями мультиполигонов.
     """
 
@@ -692,12 +703,14 @@ def cmd_extract(pbf, out):
         if r > SNAPSHOT_RADIUS:
             continue
         near.add(o.id)
-        if snapshot_way(o.tags) or ('building' in o.tags and r < SNAPSHOT_BUILDINGS):
+        is_building = 'building' in o.tags or 'building:part' in o.tags
+        if snapshot_way(o.tags) or (is_building and r < SNAPSHOT_BUILDINGS):
             keep.add(o.id)
     rels = set()
     for o in osmium.FileProcessor(str(pbf), osmium.osm.RELATION):
         t = o.tags
-        if t.get('type') != 'multipolygon' or not (snapshot_way(t) or 'building' in t):
+        is_building = 'building' in t or 'building:part' in t
+        if t.get('type') != 'multipolygon' or not (snapshot_way(t) or is_building):
             continue
         if any(m.type == 'w' and m.ref in near for m in o.members):
             rels.add(o.id)
@@ -799,6 +812,125 @@ def cmd_outline(pbf, ids):
         print(json.dumps(out, ensure_ascii=False))
 
 
+class BuildingReader(osmium.SimpleHandler):
+    """Контуры нужных зданий и все части зданий (building:part) — в локальных метрах."""
+
+    def __init__(self, want):
+        super().__init__()
+        self.wkb = osmium.geom.WKBFactory()
+        self.want = want
+        self.found = {}
+        self.parts = []
+
+    def area(self, a):
+        key = ('w' if a.from_way() else 'r') + str(a.orig_id())
+        wanted = key in self.want
+        if not wanted and 'building:part' not in a.tags:
+            return
+        try:
+            g = geom_local(swkb.loads(self.wkb.create_multipolygon(a), hex=True))
+        except Exception:
+            return
+        tags = dict(a.tags)
+        if wanted:
+            self.found[key] = (tags, g)
+        if 'building:part' in tags:
+            self.parts.append((key, tags, g))
+
+
+def cmd_building(pbf, key, opts):
+    """Здание из OSM: модель src/map/data/models/<id>.json и объект в objects.geo.json."""
+    r = BuildingReader({key})
+    r.apply_file(str(pbf), locations=True)
+    if key not in r.found:
+        sys.exit(f'{key}: не найден (в срезе — только здания в радиусе {SNAPSHOT_BUILDINGS} м)')
+    tags, outline = r.found[key]
+    main = max(polys_of(outline), key=lambda p: p.area)
+    # Точка привязки — центр контура, а у «подковы» и «серпа» — самая глубокая точка внутри.
+    c = main.centroid if main.contains(main.centroid) else ops.polylabel(main, 0.5)
+    ox, oy = round(c.x, 1), round(c.y, 1)
+    # Части здания: внутри контура (с допуском) хотя бы наполовину.
+    zone = outline.buffer(1.0)
+    parts = [
+        (ptags, g)
+        for pkey, ptags, g in r.parts
+        if pkey != key
+        and zone.contains(g.representative_point())
+        and g.intersection(zone).area > 0.5 * g.area
+    ]
+    elements = parts if parts else [(tags, outline)]
+    model_parts = buildings.model_parts(elements, tags, ox, oy)
+    if not model_parts:
+        sys.exit(f'{key}: пустая модель')
+    top = max(p['z'][1] + p.get('gable', p.get('hip', p.get('pyramid', 0))) for p in model_parts if p['type'] == 'prism')
+    levels = buildings.number(tags.get('building:levels'))
+    name = opts.name or tags.get('name') or opts.id
+    osm = ('way/' if key[0] == 'w' else 'relation/') + key[1:]
+
+    path = DATA / 'models' / f'{opts.id}.json'
+    model = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+    model.update(
+        {
+            'id': opts.id,
+            'name': model.get('name', name),
+            'source': f'OSM {osm} (osm_tool.py building): контур'
+            + (f', части ({len(parts)})' if parts else '')
+            + ', высоты и крыша; облик — рисунок art/' + opts.id + '/.',
+            'parts': model_parts,
+        }
+    )
+    if 'art' in model:  # рисунок остаётся; если геометрия изменилась, тесты это заметят
+        model['art'] = model.pop('art')
+    path.write_text(json.dumps(model, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+    plot = shapely.union_all([g for _, g in elements] + [outline]).buffer(
+        opts.margin, join_style='mitre'
+    )
+    plot = max(polys_of(plot), key=lambda p: p.area).simplify(0.5)
+    props = {
+        'id': opts.id,
+        'name': name,
+        'kind': opts.kind,
+        'model': opts.id,
+        'anchor': rnd(to_geo(ox, oy), 6),
+        'importance': opts.importance,
+        'ground': 'paving',
+    }
+    if opts.label:
+        props['label'] = opts.label
+    if opts.emphasis != 1:
+        props['emphasis'] = opts.emphasis
+    if buildings.address(tags):
+        props['address'] = buildings.address(tags)
+    props['description'] = buildings.description(tags, top, levels)
+    props['osm'] = osm
+    objects_path = DATA / 'objects.geo.json'
+    objects = json.loads(objects_path.read_text(encoding='utf-8'))
+    feature_ = {
+        'type': 'Feature',
+        'properties': props,
+        'geometry': {
+            'type': 'Polygon',
+            'coordinates': [[rnd(to_geo(x, y), 6) for x, y in plot.exterior.coords]],
+        },
+    }
+    old = next((f for f in objects['features'] if f['properties']['id'] == opts.id), None)
+    if old:
+        # Ручные правки свойств (подпись, описание, укрупнение) сохраняются.
+        feature_['properties'] = {**props, **old['properties'], 'anchor': props['anchor']}
+        objects['features'][objects['features'].index(old)] = feature_
+    else:
+        objects['features'].append(feature_)
+    objects_path.write_text(json.dumps(objects, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    prettier(path, objects_path)
+    print(
+        f'{path.relative_to(ROOT)}: {len(model_parts)} частей, высота {top:.0f} м'
+        + (f' (частей OSM: {len(parts)})' if parts else '')
+        + f'; объект {"обновлён" if old else "добавлен"} в {objects_path.relative_to(ROOT)}',
+        file=sys.stderr,
+    )
+
+
 def pbf_and_rest(args):
     """Первый аргумент — файл .pbf, если он так выглядит; иначе — срез из репозитория."""
     if args and args[0].endswith('.pbf'):
@@ -823,6 +955,15 @@ def main():
     p.add_argument('args', nargs='+')
     p = sub.add_parser('outline')
     p.add_argument('args', nargs='+')
+    p = sub.add_parser('building')
+    p.add_argument('args', nargs='+', help='[pbf] w123|r456')
+    p.add_argument('--id', required=True, help='id модели и объекта (латиницей, через дефис)')
+    p.add_argument('--kind', default='building')
+    p.add_argument('--name')
+    p.add_argument('--label')
+    p.add_argument('--emphasis', type=float, default=1.0)
+    p.add_argument('--importance', type=int, default=3)
+    p.add_argument('--margin', type=float, default=4.0, help='отступ участка от здания, м')
     a = ap.parse_args()
     if a.cmd == 'extract':
         cmd_extract(a.pbf, a.out)
@@ -837,6 +978,9 @@ def main():
         pbf, rest = pbf_and_rest(a.args)
         lat, lon = float(rest[0]), float(rest[1])
         cmd_find(pbf, lat, lon, float(rest[2]) if len(rest) > 2 else 60)
+    elif a.cmd == 'building':
+        pbf, rest = pbf_and_rest(a.args)
+        cmd_building(pbf, rest[0], a)
     else:
         pbf, rest = pbf_and_rest(a.args)
         cmd_outline(pbf, rest)

@@ -1,0 +1,47 @@
+{
+  "notes": "Бирюзово-зелёные стены с белым кружевным декором (псевдоготика: стрельчатые наличники, пинакли, балюстрада), светло-бирюзовая крыша. На юго-западном углу — полукруглая ротонда с высокими стрельчатыми окнами, над ней бельведер со светло-бирюзовым куполом. Главный фасад — на юг, к пр. Ленина. Два высоких этажа над цоколем.",
+  "photos": [
+    {
+      "title": "Викисклад: E-burg asv2019-05 img27 Sevastianov Manor.jpg",
+      "url": "https://commons.wikimedia.org/wiki/File:E-burg_asv2019-05_img27_Sevastianov_Manor.jpg"
+    },
+    {
+      "title": "Викисклад: категория «Sevastyanov's Mansion»",
+      "url": "https://commons.wikimedia.org/wiki/Category:Sevastyanov%27s_Mansion"
+    },
+    {
+      "title": "Википедия: Дом Севастьянова",
+      "url": "https://ru.wikipedia.org/wiki/%D0%94%D0%BE%D0%BC_%D0%A1%D0%B5%D0%B2%D0%B0%D1%81%D1%82%D1%8C%D1%8F%D0%BD%D0%BE%D0%B2%D0%B0"
+    },
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.606094%2C56.839137&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.839137%2C60.606094"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.839137,60.606094&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D0%94%D0%BE%D0%BC%20%D0%A1%D0%B5%D0%B2%D0%B0%D1%81%D1%82%D1%8C%D1%8F%D0%BD%D0%BE%D0%B2%D0%B0%20%D0%BF%D1%80.%20%D0%9B%D0%B5%D0%BD%D0%B8%D0%BD%D0%B0%2C%2035%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: way/51503505",
+      "url": "https://www.openstreetmap.org/way/51503505"
+    }
+  ],
+  "osm_tags": {
+    "name": "Дом Н.И. Севастьянова",
+    "addr:street": "проспект Ленина",
+    "addr:housenumber": "35",
+    "start_date": "1829;1863..1866",
+    "building": "government",
+    "building:levels": "4",
+    "roof:shape": "hipped",
+    "wikidata": "Q4165394"
+  }
+}
