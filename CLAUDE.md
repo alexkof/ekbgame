@@ -17,3 +17,6 @@
   для Codex — `AGENTS.md`.
 - Одна ветка `main`; каждый push в неё публикуется на https://alexkof.github.io/ekbgame/
   (`.github/workflows/deploy.yml`).
+- **Всё коммитить и пушить сразу в `main`** — без отдельных веток и pull request'ов, в том числе
+  ИИ-агентам (Claude, Codex). Если сессии назначена другая ветка — всё равно доводить работу до
+  `main` (fast-forward или rebase на свежий `main`, потом push). Перед push — `npm run check`.

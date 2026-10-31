@@ -7,6 +7,8 @@
   идентификаторы — английский.
 - Перед коммитом кода: `npm run check` (prettier, tsc, vitest) должен проходить.
 - Одна ветка `main`; каждый push в неё публикуется на https://alexkof.github.io/ekbgame/.
+- **Коммить и пушь сразу в `main`** — без отдельных веток и pull request'ов. Перед push
+  подтяни свежий `main` (`git pull --rebase origin main`).
 
 ## Рисунки зданий
 
@@ -20,7 +22,7 @@
   `python3 scripts/art/generate.py <id>` (нужен `OPENAI_API_KEY`) или встроенным генератором
   изображений с теми же входами;
 - больше ничего не меняй: модели (`src/map/data/models/`), каркасы, запросы, `info.json` и код
-  трогать не нужно. Рисунок на карту ставит CI после попадания коммита в `main`
+  трогать не нужно. Коммить сразу в `main`: рисунок на карту поставит CI
   (`.github/workflows/art.yml`).
 
 Методика целиком — [docs/ART.md](docs/ART.md).
