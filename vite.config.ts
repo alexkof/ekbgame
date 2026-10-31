@@ -33,5 +33,8 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    // Кэш модулей на диске не замечает новые файлы в import.meta.glob (новые модели зданий):
+    // тесты видели старый список. Без кэша тесты идут меньше секунды.
+    fsModuleCache: false,
   },
 });

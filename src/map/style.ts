@@ -53,4 +53,6 @@ export const KIND_INFO: Record<ObjectKind, { title: string; icon: string; color:
   building: { title: 'Здание', icon: '🏢', color: '#8c7b6b' },
   hotel: { title: 'Гостиница', icon: '🏨', color: '#b0703c' },
   circus: { title: 'Цирк', icon: '🎪', color: '#c43d5a' },
+  cinema: { title: 'Кинотеатр', icon: '🎬', color: '#7a4fb0' },
+  monument: { title: 'Памятник', icon: '🗿', color: '#7d7468' },
 };

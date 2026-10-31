@@ -1,0 +1,32 @@
+{
+  "notes": "",
+  "photos": [
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.606438%2C56.839689&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.839689%2C60.606438"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.839689,60.606438&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D0%A0%D0%B5%D0%B7%D0%B8%D0%B4%D0%B5%D0%BD%D1%86%D0%B8%D1%8F%20%D0%B3%D1%83%D0%B1%D0%B5%D1%80%D0%BD%D0%B0%D1%82%D0%BE%D1%80%D0%B0%20%D1%83%D0%BB.%20%D0%9C%D0%B0%D0%BA%D1%81%D0%B8%D0%BC%D0%B0%20%D0%93%D0%BE%D1%80%D1%8C%D0%BA%D0%BE%D0%B3%D0%BE%2C%2021%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: relation/421103",
+      "url": "https://www.openstreetmap.org/relation/421103"
+    }
+  ],
+  "osm_tags": {
+    "name": "Tarasov’s Mansion",
+    "addr:street": "улица Максима Горького",
+    "addr:housenumber": "21",
+    "building": "government",
+    "building:levels": "5"
+  }
+}

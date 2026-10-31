@@ -1,0 +1,32 @@
+{
+  "notes": "Небольшая белая беседка-ротонда на набережной пруда: колонны по кругу, сверху купол.",
+  "photos": [
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.605183%2C56.838898&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.838898%2C60.605183"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.838898,60.605183&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D0%A0%D0%BE%D1%82%D0%BE%D0%BD%D0%B4%D0%B0%20%D0%BD%D0%B0%20%D0%BD%D0%B0%D0%B1%D0%B5%D1%80%D0%B5%D0%B6%D0%BD%D0%BE%D0%B9%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: way/422444440",
+      "url": "https://www.openstreetmap.org/way/422444440"
+    }
+  ],
+  "osm_tags": {
+    "name": "Ротонда",
+    "start_date": "2008",
+    "building": "yes",
+    "building:levels": "1",
+    "roof:shape": "dome"
+  }
+}

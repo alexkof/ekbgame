@@ -12,6 +12,8 @@
 - Рисунки зданий — `docs/ART.md`. В `art/<id>/` README, каркасы и `frame.json` генерирует
   `scripts/art/art.py prepare` (заметки и фото — в `info.json`); после правки модели здания —
   снова `prepare` (тесты проверяют отпечаток геометрии). Рисунки из `drawn/` ставит на карту
-  CI (`art.yml`) или `art.py import <id>`.
+  CI (`art.yml`) или `art.py import <id>`. Кварталы — `art/quarters/*.json`
+  (`osm_tool.py quarter`), задания для Codex — `art/tasks/*.md` (`art.py tasks`), инструкции
+  для Codex — `AGENTS.md`.
 - Одна ветка `main`; каждый push в неё публикуется на https://alexkof.github.io/ekbgame/
   (`.github/workflows/deploy.yml`).

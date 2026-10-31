@@ -31,7 +31,9 @@ describe('рисунки зданий', () => {
   });
 
   it('каркасы в art/ построены по текущим моделям', () => {
-    const dirs = readdirSync(ART, { withFileTypes: true }).filter((d) => d.isDirectory());
+    const dirs = readdirSync(ART, { withFileTypes: true }).filter(
+      (d) => d.isDirectory() && !['quarters', 'tasks'].includes(d.name),
+    );
     expect(dirs.length).toBeGreaterThan(0);
     for (const d of dirs) {
       const path = join(ART, d.name, 'frame.json');
@@ -45,6 +47,20 @@ describe('рисунки зданий', () => {
       ).toBe(artGeometryKey(model!));
       expect([1024, 1536]).toContain(frame.size[0]);
       expect([1024, 1536]).toContain(frame.size[1]);
+    }
+  });
+
+  it('у каждого объекта квартала есть каркас', () => {
+    const dir = join(ART, 'quarters');
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+      const q = JSON.parse(readFileSync(join(dir, file), 'utf-8'));
+      for (const id of q.objects ?? []) {
+        expect(MAP_MODELS[id], `${file}: нет модели ${id}`).toBeDefined();
+        expect(
+          existsSync(join(ART, id, 'frame.json')),
+          `${file}: нет каркаса art/${id}/ (art.py prepare ${id})`,
+        ).toBe(true);
+      }
     }
   });
 

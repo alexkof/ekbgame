@@ -1,0 +1,146 @@
+{
+  "id": "sevastyanov",
+  "name": "Квартал Дома Севастьянова и Главпочтамта",
+  "bounds": "пр. Ленина — ул. Карла Либкнехта — Почтовый пер. (и его продолжение до Карла Либкнехта) — набережная Городского пруда",
+  "first": ["sevastyanov-house", "glavpochtamt", "kolizey", "governor-residence"],
+  "polygon": [
+    [60.6036, 56.8384],
+    [60.60555, 56.83862],
+    [60.60778, 56.83887],
+    [60.60952, 56.83907],
+    [60.6114, 56.83927],
+    [60.611, 56.8406],
+    [60.609, 56.84047],
+    [60.60787, 56.84037],
+    [60.60664, 56.84024],
+    [60.605, 56.8402],
+    [60.6036, 56.8384]
+  ],
+  "min_area": 40,
+  "margin": 2,
+  "buildings": {
+    "w51503505": {
+      "id": "sevastyanov-house",
+      "keep": true
+    },
+    "r16896445": {
+      "id": "glavpochtamt",
+      "name": "Главпочтамт",
+      "kind": "civic",
+      "importance": 2,
+      "description": "Дом связи (1934), конструктивизм. На сквере перед ним — памятник изобретателю радио А. С. Попову.",
+      "color": "#eeede8",
+      "roof": "#9da1a4"
+    },
+    "w47983930": {
+      "id": "kolizey",
+      "name": "Кинотеатр «Колизей»",
+      "label": "«Колизей»",
+      "kind": "cinema",
+      "importance": 2,
+      "color": "#efe1b2",
+      "roof": "#9a9d9a",
+      "tags": {
+        "height": "12"
+      },
+      "description": "Здание 1847 года: до 1912 года — первый городской театр, с 1920-х — кинотеатр."
+    },
+    "r421103": {
+      "id": "governor-residence",
+      "name": "Резиденция губернатора",
+      "kind": "civic",
+      "importance": 2,
+      "description": "Бывшая усадьба Тарасова на набережной Городского пруда."
+    },
+    "w51503512": {
+      "id": "mining-pharmacy",
+      "name": "Аптека горного ведомства",
+      "importance": 3
+    },
+    "w422444440": {
+      "id": "rotunda",
+      "name": "Ротонда на набережной",
+      "importance": 3
+    },
+    "w51503517": {
+      "id": "lenina-41",
+      "with": ["w51503518"]
+    },
+    "w51503513": {
+      "id": "tolmacheva-21"
+    },
+    "w51503520": {
+      "id": "karla-libknekhta-23"
+    },
+    "w51503516": {
+      "id": "pushkina-22"
+    },
+    "w51503515": {
+      "id": "pushkina-19"
+    },
+    "w626950082": {
+      "id": "sevastyanov-1"
+    },
+    "w285334289": {
+      "id": "sevastyanov-2"
+    },
+    "w51503519": {
+      "id": "tolmacheva-16"
+    },
+    "w62228173": {
+      "id": "pushkina-19-2"
+    },
+    "r16896444": {
+      "id": "lenina-39b"
+    },
+    "w55413711": {
+      "id": "sevastyanov-3"
+    },
+    "w51503506": {
+      "id": "sevastyanov-4"
+    },
+    "w165272442": {
+      "id": "sevastyanov-5"
+    },
+    "w71207494": {
+      "id": "sevastyanov-6"
+    }
+  },
+  "monuments": [
+    {
+      "id": "popov-monument",
+      "name": "Памятник А. С. Попову",
+      "osm": "node/470138069",
+      "at": [60.607769, 56.839578],
+      "pedestal": [2.0, 2.0, 3.0],
+      "statue": 2.6,
+      "importance": 3,
+      "description": "Памятник изобретателю радио на сквере у Главпочтамта.",
+      "color": "#8f8e89",
+      "statueColor": "#8a6a3c"
+    }
+  ],
+  "objects": [
+    "tolmacheva-21",
+    "karla-libknekhta-23",
+    "pushkina-22",
+    "pushkina-19",
+    "sevastyanov-1",
+    "sevastyanov-2",
+    "governor-residence",
+    "tolmacheva-16",
+    "pushkina-19-2",
+    "lenina-39b",
+    "sevastyanov-3",
+    "kolizey",
+    "lenina-41",
+    "glavpochtamt",
+    "sevastyanov-4",
+    "sevastyanov-5",
+    "sevastyanov-6",
+    "sevastyanov-house",
+    "mining-pharmacy",
+    "rotunda",
+    "popov-monument"
+  ]
+}

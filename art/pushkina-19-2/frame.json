@@ -1,0 +1,17 @@
+{
+  "model": "pushkina-19-2",
+  "size": [1024, 1536],
+  "ppm": 25.25,
+  "origin": [485.8, 906.5],
+  "geometry": "4513f652c1be38d0",
+  "camera": {
+    "groundTilt": 0.78,
+    "heightFactor": 0.62,
+    "lean": 0.24
+  },
+  "heights": {
+    "linearUpTo": 20,
+    "linearScale": 1.5,
+    "power": 0.8
+  }
+}

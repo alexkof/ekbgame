@@ -3,7 +3,10 @@
   "photos": [
     {
       "title": "Викисклад: E-burg asv2019-05 img27 Sevastianov Manor.jpg",
-      "url": "https://commons.wikimedia.org/wiki/File:E-burg_asv2019-05_img27_Sevastianov_Manor.jpg"
+      "url": "https://commons.wikimedia.org/wiki/File:E-burg_asv2019-05_img27_Sevastianov_Manor.jpg",
+      "file": "photos/e-burg-asv2019-05-img27-sevastianov-manor.jpg",
+      "author": "A.Savin",
+      "license": "Free Art License"
     },
     {
       "title": "Викисклад: категория «Sevastyanov's Mansion»",

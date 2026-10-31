@@ -3,10 +3,13 @@
   "photos": [
     {
       "title": "Викисклад: Views from Vysotsky skyscraper-2021-28.JPG",
-      "url": "https://commons.wikimedia.org/wiki/File:Views_from_Vysotsky_skyscraper-2021-28.JPG"
+      "url": "https://commons.wikimedia.org/wiki/File:Views_from_Vysotsky_skyscraper-2021-28.JPG",
+      "file": "photos/views-from-vysotsky-skyscraper-2021-28.jpg",
+      "author": "?",
+      "license": "CC BY-SA 4.0"
     },
     {
-      "title": "Викисклад: Городок чекистов.jpg",
+      "title": "Викисклад: Городок чекистов.jpg (жилой дом Городка чекистов, не гостиница)",
       "url": "https://commons.wikimedia.org/wiki/File:%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D0%BE%D0%BA_%D1%87%D0%B5%D0%BA%D0%B8%D1%81%D1%82%D0%BE%D0%B2.jpg"
     },
     {

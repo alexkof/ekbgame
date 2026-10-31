@@ -1,0 +1,17 @@
+{
+  "model": "sevastyanov-1",
+  "size": [1536, 1024],
+  "ppm": 96.245,
+  "origin": [722.4, 682.1],
+  "geometry": "27d8f594a06a1e8a",
+  "camera": {
+    "groundTilt": 0.78,
+    "heightFactor": 0.62,
+    "lean": 0.24
+  },
+  "heights": {
+    "linearUpTo": 20,
+    "linearScale": 1.5,
+    "power": 0.8
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "sevastyanov-6",
+  "name": "Дворовая постройка",
+  "source": "OSM way/71207494 (osm_tool.py): контур, высоты и крыша; облик — рисунок art/sevastyanov-6/.",
+  "parts": [
+    {
+      "type": "prism",
+      "outline": [
+        [-5.8, 10.9],
+        [-1.2, -12.4],
+        [5.9, -11],
+        [1.3, 12.3]
+      ],
+      "z": [0, 3.8],
+      "color": "#d9cdb4",
+      "roof": "#a09d96",
+      "facade": "grid",
+      "floor": 3.8
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "tolmacheva-16",
+  "name": "ул. Толмачёва, 16",
+  "source": "OSM way/51503519 (osm_tool.py): контур, высоты и крыша; облик — рисунок art/tolmacheva-16/.",
+  "parts": [
+    {
+      "type": "prism",
+      "outline": [
+        [-7.9, 8.3],
+        [-4.1, -10.8],
+        [7.9, -8.4],
+        [4, 10.7]
+      ],
+      "z": [0, 24],
+      "color": "#d9cdb4",
+      "roof": "#a09d96",
+      "facade": "grid",
+      "floor": 4
+    }
+  ]
+}

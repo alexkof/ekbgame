@@ -1,0 +1,46 @@
+{
+  "notes": "",
+  "photos": [
+    {
+      "title": "Викисклад: Yekaterinburg LeninAvenue37 005 2772.jpg",
+      "url": "https://commons.wikimedia.org/wiki/File:Yekaterinburg_LeninAvenue37_005_2772.jpg"
+    },
+    {
+      "title": "Викисклад: категория «Lenina Avenue 37, Yekaterinburg»",
+      "url": "https://commons.wikimedia.org/wiki/Category:Lenina_Avenue_37%2C_Yekaterinburg"
+    },
+    {
+      "title": "Википедия: Аптека горного ведомства (Екатеринбург)",
+      "url": "https://ru.wikipedia.org/wiki/%D0%90%D0%BF%D1%82%D0%B5%D0%BA%D0%B0_%D0%B3%D0%BE%D1%80%D0%BD%D0%BE%D0%B3%D0%BE_%D0%B2%D0%B5%D0%B4%D0%BE%D0%BC%D1%81%D1%82%D0%B2%D0%B0_%28%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3%29"
+    },
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.606944%2C56.839096&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.839096%2C60.606944"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.839096,60.606944&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D0%90%D0%BF%D1%82%D0%B5%D0%BA%D0%B0%20%D0%B3%D0%BE%D1%80%D0%BD%D0%BE%D0%B3%D0%BE%20%D0%B2%D0%B5%D0%B4%D0%BE%D0%BC%D1%81%D1%82%D0%B2%D0%B0%20%D0%BF%D1%80.%20%D0%9B%D0%B5%D0%BD%D0%B8%D0%BD%D0%B0%2C%2037%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: way/51503512",
+      "url": "https://www.openstreetmap.org/way/51503512"
+    }
+  ],
+  "osm_tags": {
+    "addr:street": "проспект Ленина",
+    "addr:housenumber": "37",
+    "start_date": "1821",
+    "building": "yes",
+    "building:levels": "2",
+    "roof:shape": "hipped",
+    "wikidata": "Q4068265"
+  }
+}

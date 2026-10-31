@@ -8,7 +8,9 @@
   import  <id> [рисунок]  рисунок из art/<id>/drawn/ → src/map/data/models/<id>/art.webp
                           и поле "art" в модели (по умолчанию — последний добавленный рисунок)
   import  --new           все рисунки, которые ещё не стоят на карте (так работает CI)
-  readme  [<id> …]        пересобрать README (после правки info.json или style.txt)
+  prepare --quarter <q>   то же для всех зданий квартала art/quarters/<q>.json
+  readme  [<id> …]        пересобрать README и prompt.txt (после правки info.json или style.txt)
+  tasks   <q>             задания для Codex по кварталу → art/tasks/<q>.md
   status                  что нарисовано, что нет, что устарело
 
 Модель здания (src/map/data/models/<id>.json) — промежуточный шаг: из неё каркас для
@@ -158,7 +160,9 @@ def osm_tags(osm):
     except Exception as e:  # нет osmium/shapely — обойдёмся без тегов
         print(f'теги OSM недоступны ({e})', file=sys.stderr)
         return {}
-    kind, ident = osm.split('/')
+    kind, ident = osm.split(',')[0].strip().split('/')
+    if kind == 'node':  # точек (памятников) в срезе нет — теги задаются в info.json
+        return {}
     key = ('w' if kind == 'way' else 'r') + ident
     f = osm_tool.Finder(want={key})
     f.apply_file(str(osm_tool.SNAPSHOT), locations=True)
@@ -217,6 +221,90 @@ def photo_links(info, props):
     return links
 
 
+# Свободные лицензии Викисклада: CC BY, CC BY-SA, CC0, общественное достояние, FAL, GFDL.
+FREE = re.compile(r'\{\{[^{}]*?\b(cc-by(?:-sa)?(?:-[\d.]+)*|cc-zero|cc0|pd-[a-z0-9-]+|fal|gfdl)\b', re.I)
+
+
+def commons_file(name, dest):
+    """Фото с Викисклада, если лицензия свободная: файл (1280 px) + автор и лицензия."""
+    name = name.replace(' ', '_')
+    headers = {'User-Agent': f'ekbgame-art/1.0 ({REPO})'}
+    url = f'https://commons.wikimedia.org/w/index.php?title=File:{urllib.parse.quote(name)}&action=raw'
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as r:
+            text = r.read().decode('utf-8')
+    except Exception as e:
+        print(f'Викисклад {name}: {e}', file=sys.stderr)
+        return None
+    lic = FREE.search(text)
+    if not lic:
+        print(f'Викисклад {name}: лицензия не свободная или не распознана — только ссылка', file=sys.stderr)
+        return None
+    author = re.search(r'\|\s*author\s*=\s*(.+)', text, re.I) or re.search(r'\{\{User:([^/|}]+)', text)
+    author = re.sub(r'\[\[(?:[^|\]]*\|)?([^\]]*)\]\]', r'\1', author.group(1)).strip() if author else '?'
+    author = re.sub(r'\{\{[^}]*\}\}|\[\S+ ([^\]]+)\]', r'\1', author).strip() or '?'
+    h = __import__('hashlib').md5(name.encode()).hexdigest()
+    q = urllib.parse.quote(name)
+    base = f'https://upload.wikimedia.org/wikipedia/commons'
+    # Викисклад без ограничений отдаёт только уменьшенные копии стандартных ширин
+    # (https://w.wiki/GHai) и не любит частые запросы.
+    urls = [f'{base}/thumb/{h[0]}/{h[:2]}/{q}/960px-{q}']
+    data, error = None, None
+    for url in urls:
+        __import__('time').sleep(4)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as r:
+                data = r.read()
+            break
+        except Exception as e:
+            error = e
+    if data is None:
+        print(f'Викисклад {name}: не скачалось ({error}) — только ссылка', file=sys.stderr)
+        return None
+    dest.parent.mkdir(exist_ok=True)
+    dest.write_bytes(data)
+    return {'author': author[:120], 'license': license_name(lic.group(1))}
+
+
+def license_name(token):
+    t = token.lower()
+    m = re.match(r'cc-(by(?:-sa)?)(?:-([\d.]+))?', t)
+    if m:
+        return f'CC {m.group(1).upper()} {m.group(2) or ""}'.strip()
+    if t in ('cc-zero', 'cc0'):
+        return 'CC0'
+    if t.startswith('pd'):
+        return 'общественное достояние'
+    return {'fal': 'Free Art License', 'gfdl': 'GFDL'}.get(t, token)
+
+
+TRANSLIT = dict(
+    zip(
+        'абвгдеёжзийклмнопрстуфхцчшщъыьэюя',
+        'a b v g d e e zh z i y k l m n o p r s t u f kh ts ch sh shch _ y _ e yu ya'.replace('_', '').split(' '),
+    )
+)
+
+
+def fetch_photos(mid, info, limit=3):
+    """Свободные фото из ссылок на Викисклад — в photos/ (для генератора и Codex)."""
+    got = sum(1 for p in info.get('photos', []) if p.get('file'))
+    for p in info.get('photos', []):
+        if got >= limit:
+            break
+        m = re.match(r'https://commons\.wikimedia\.org/wiki/File:(.+)$', p['url'])
+        if not m or p.get('file') or p.get('skip'):
+            continue
+        name = urllib.parse.unquote(m.group(1))
+        stem = ''.join(TRANSLIT.get(ch, ch) for ch in Path(name).stem.lower())
+        stem = re.sub(r'[^a-z0-9]+', '-', stem).strip('-')[:60]
+        dest = ART / mid / 'photos' / f'{stem}.jpg'
+        meta = commons_file(name, dest)
+        if meta:
+            p.update({'file': f'photos/{dest.name}', **meta})
+            got += 1
+
+
 # --------------------------------------------------------------- запрос
 
 
@@ -225,6 +313,25 @@ def size_name(size):
     if w == h:
         return f'квадрат {w}×{h}'
     return f'{"горизонтальный 3:2" if w > h else "вертикальный 2:3"}, {w}×{h}'
+
+
+def own_photos(mid):
+    d = ART / mid / 'photos'
+    return sorted(p for p in d.iterdir() if p.suffix.lower() in DRAWN) if d.exists() else []
+
+
+def photo_lines(mid):
+    files = own_photos(mid)
+    if not files:
+        return [
+            'Фотографии (если приложены) — облик этого здания: цвета, материалы, окна, декор. '
+            'Если фото нет, рисуй по каркасу и описанию ниже, в духе исторического центра Екатеринбурга.'
+        ]
+    names = ', '.join(f'photos/{p.name}' for p in files)
+    n = len(files)
+    span = 'Картинка 2' if n == 1 else f'Картинки 2–{n + 1}'
+    what = 'фотография' if n == 1 else 'фотографии'
+    return [f'{span} — {what} этого здания ({names}): облик, цвета, материалы, окна, декор.']
 
 
 def prompt(mid, model, props, info, frame):
@@ -250,7 +357,8 @@ def prompt(mid, model, props, info, frame):
         f'Нарисуй здание «{", ".join(about)}» для карты-игры.',
         '',
         'Картинка 1 — каркас: 3D-модель здания в проекции нашей карты. Это точная геометрия и кадр.',
-        'Остальные картинки — фотографии этого здания: облик, цвета, материалы, окна, декор.',
+        *photo_lines(mid),
+        'Если последней приложена картинка «образец стиля» (art/style-ref.png) — это рисунок другого здания нашей карты: рисуй в точно таком же стиле (контуры, палитра, светотень, детализация), но здание — своё.',
         '',
         'Как рисовать:',
         f'- Формат — {size_name(frame["size"])}, как у картинки 1. Сохрани кадр картинки 1: та же камера, то же положение, размер и силуэт здания. Не поворачивай, не сдвигай, не масштабируй, не добавляй перспективу: вертикали остаются вертикальными и наклонены вправо так же, как на каркасе, параллельные линии остаются параллельными.',
@@ -317,10 +425,16 @@ def readme(mid):
     else:
         rows.append(('Рисунок', 'ещё нет'))
     table = '\n'.join(['| | |', '| --- | --- |'] + [f'| {k} | {v} |' for k, v in rows])
-    photos = '\n'.join(f'- [{p["title"]}]({p["url"]})' for p in info.get('photos', []))
-    own = sorted(p.name for p in (ART / mid / 'photos').glob('*') if p.suffix.lower() in DRAWN) if (ART / mid / 'photos').exists() else []
-    if own:
-        photos += '\n' + '\n'.join(f'- [photos/{n}](photos/{n})' for n in own)
+    def line(p):
+        if p.get('file'):
+            return f'- [`{p["file"]}`]({p["file"]}) — {p.get("author", "?")}, {p.get("license", "?")} ([источник]({p["url"]}))'
+        return f'- [{p["title"]}]({p["url"]})'
+
+    photos = '\n'.join(line(p) for p in info.get('photos', []))
+    listed = {p.get('file') for p in info.get('photos', [])}
+    extra = [f'photos/{p.name}' for p in own_photos(mid) if f'photos/{p.name}' not in listed]
+    if extra:
+        photos += '\n' + '\n'.join(f'- [`{n}`]({n})' for n in extra)
     text = f"""# {name}
 
 <!-- Файл собирает scripts/art/art.py readme: правьте info.json (заметки, фото) и style.txt. -->
@@ -355,6 +469,7 @@ def readme(mid):
     if (ART / mid / 'check.jpg').exists():
         text += '\n## Проверка совмещения\n\nРисунок на карте; красным — контуры каркаса.\n\n![Проверка](check.jpg)\n'
     (ART / mid / 'README.md').write_text(text, encoding='utf-8')
+    (ART / mid / 'prompt.txt').write_text(prompt(mid, model, props, info, frame) + '\n', encoding='utf-8')
     return name, bool(art), stale
 
 
@@ -399,11 +514,88 @@ def cmd_prepare(ids):
             info['osm_tags'] = {k: tags[k] for k in keys if k in tags}
         if not info.get('photos'):
             info['photos'] = photo_links(info, props)
+        fetch_photos(mid, info)
         save(info_path, info)
         prettier(info_path, d / 'frame.json')
         readme(mid)
     index()
     prettier(*(ART / mid / 'README.md' for mid in ids), ART / 'README.md')
+
+
+def quarter(q):
+    path = ART / 'quarters' / f'{q}.json'
+    if not path.exists():
+        sys.exit(f'Нет квартала {rel(path)}')
+    return load(path)
+
+
+def cmd_tasks(q):
+    """Задания для Codex (или другого агента с генератором изображений) по кварталу."""
+    quart = quarter(q)
+    first = quart.get('first', [])
+    rows = {}
+    for mid in quart['objects']:
+        props = object_of(mid)
+        frame = load(ART / mid / 'frame.json')
+        done = bool(drawings(mid))
+        photos = len(own_photos(mid))
+        what = props.get('name') or mid
+        if props.get('address') and props['address'] != what:
+            what += f', {props["address"]}'
+        rows[mid] = (
+            f'- [{"x" if done else " "}] `{mid}` — {what} — каркас {frame["size"][0]}×{frame["size"][1]}'
+            + (f', фото: {photos}' if photos else ', фото нет')
+        )
+    stage1 = [rows[m] for m in first if m in rows]
+    stage2 = [rows[m] for m in quart['objects'] if m not in first]
+    text = f"""# Задание: рисунки квартала «{quart['name']}»
+
+<!-- Файл собирает python scripts/art/art.py tasks {q}; отметки [x] ставит исполнитель. -->
+
+Граница: {quart.get('bounds', '')}. Объектов: {len(rows)}. Методика — [docs/ART.md](../../docs/ART.md).
+
+Нужно для каждого здания из списка нарисовать картинку по каркасу и закоммитить её. Больше
+ничего не меняй: модели, каркасы, запросы и код не трогай. На карту рисунки поставит CI
+(`.github/workflows/art.yml`), когда коммит попадёт в `main`.
+
+## Одно здание `<id>`
+
+1. Прочитай `art/<id>/prompt.txt` — это запрос к генератору изображений, его не меняй.
+2. Входные картинки по порядку: `art/<id>/guide.png` (каркас — всегда первой), затем файлы
+   из `art/<id>/photos/` (если есть), последней — `art/style-ref.png` (если есть).
+3. Сгенерируй одну картинку размера `size` из `art/<id>/frame.json` (1024×1024, 1536×1024
+   или 1024×1536):
+   - если задан `OPENAI_API_KEY` — запусти `python3 scripts/art/generate.py <id>`: скрипт сам
+     отправит каркас, фото, образец стиля и запрос и сохранит ответ в `art/<id>/drawn/`;
+   - иначе, если у тебя есть встроенный генератор изображений, — сгенерируй им с теми же
+     входами и запросом и сохрани PNG как `art/<id>/drawn/codex-<ГГГГММДД-ЧЧММ>.png`.
+4. Проверь результат (открой картинку): размер как у каркаса; здание на том же месте, того же
+   размера и формы, что на каркасе; фон белый; нет земли, теней, деревьев, людей, машин и
+   подписей. Если не так — сгенерируй заново (не больше трёх попыток), неудачные файлы удали.
+5. Отметь здание в списке: `- [x]`.
+6. Коммит: `Рисунок: <id>` — только новый файл в `art/<id>/drawn/` и этот список.
+
+Если нет ни ключа, ни генератора изображений — остановись и сообщи об этом, ничего не коммить.
+
+## Этап 1 — главные здания
+
+По ним задаётся стиль квартала. Сделай их и **остановись**: человек выберет лучший рисунок
+образцом стиля. Когда попросят «сделай … образцом стиля», скопируй этот файл из
+`art/<id>/drawn/` в `art/style-ref.png` и закоммить (`Образец стиля: <id>`).
+
+{chr(10).join(stage1) or '—'}
+
+## Этап 2 — остальные
+
+Только когда есть `art/style-ref.png` (иначе остановись и сообщи).
+
+{chr(10).join(stage2) or '—'}
+"""
+    out = ART / 'tasks' / f'{q}.md'
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(text, encoding='utf-8')
+    prettier(out)
+    print(f'{rel(out)}: {len(rows)} объектов, готово {sum("[x]" in r for r in rows.values())}')
 
 
 def cmd_readme(ids):
@@ -494,7 +686,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('prepare')
-    p.add_argument('ids', nargs='+')
+    p.add_argument('ids', nargs='*')
+    p.add_argument('--quarter')
+    p = sub.add_parser('tasks')
+    p.add_argument('quarter')
     p = sub.add_parser('import')
     p.add_argument('id', nargs='?')
     p.add_argument('drawing', nargs='?')
@@ -505,7 +700,12 @@ def main():
     sub.add_parser('status')
     a = ap.parse_args()
     if a.cmd == 'prepare':
-        cmd_prepare(a.ids)
+        ids = a.ids + (quarter(a.quarter)['objects'] if a.quarter else [])
+        if not ids:
+            ap.error('prepare <id> … или prepare --quarter <квартал>')
+        cmd_prepare(ids)
+    elif a.cmd == 'tasks':
+        cmd_tasks(a.quarter)
     elif a.cmd == 'readme':
         cmd_readme(a.ids)
     elif a.cmd == 'status':

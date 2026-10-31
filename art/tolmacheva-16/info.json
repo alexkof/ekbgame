@@ -1,0 +1,32 @@
+{
+  "notes": "",
+  "photos": [
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.609587%2C56.839725&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.839725%2C60.609587"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.839725,60.609587&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D1%83%D0%BB.%20%D0%A2%D0%BE%D0%BB%D0%BC%D0%B0%D1%87%D1%91%D0%B2%D0%B0%2C%2016%20%D1%83%D0%BB.%20%D0%A2%D0%BE%D0%BB%D0%BC%D0%B0%D1%87%D1%91%D0%B2%D0%B0%2C%2016%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: way/51503519",
+      "url": "https://www.openstreetmap.org/way/51503519"
+    }
+  ],
+  "osm_tags": {
+    "addr:street": "улица Толмачёва",
+    "addr:housenumber": "16",
+    "start_date": "1917",
+    "building": "apartments",
+    "building:levels": "6"
+  }
+}

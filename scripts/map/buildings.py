@@ -171,8 +171,11 @@ def heights(tags, poly, outline_tags):
         walls = top - roof_h
     else:
         if levels is None:
+            # Без этажности: по типу, а у безымянных «yes» — по площади (сараи во дворах
+            # невысокие).
             b = outline_tags.get('building', 'yes')
-            levels = DEFAULT_LEVELS.get(b, 3)
+            area = poly.area
+            levels = DEFAULT_LEVELS.get(b, 1 if area < 150 else 2 if area < 400 else 3)
         walls = levels * level + 0.6
     low = number(tags.get('min_height'))
     if low is None and number(tags.get('building:min_level')) is not None:

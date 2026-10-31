@@ -316,7 +316,7 @@ export class MapRenderer {
     );
     for (const la of labelAnchors) {
       const imp = la.o.props.importance ?? 3;
-      const minZoom = imp === 1 ? 0.18 : imp === 2 ? 0.35 : 0.6;
+      const minZoom = imp === 1 ? 0.18 : imp === 2 ? 0.35 : imp === 3 ? 0.6 : Infinity;
       if (z * la.o.scale < minZoom && state.selectedId !== la.o.props.id) continue;
       this.drawObjectLabel(la.o, la.x, la.y, boxes, state.selectedId === la.o.props.id);
     }

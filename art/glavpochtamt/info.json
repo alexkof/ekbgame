@@ -1,0 +1,67 @@
+{
+  "notes": "Конструктивизм, 1934. Белые оштукатуренные стены на цоколе из серого гранита, ступенчатые объёмы разной высоты; над главным входом — высокий объём-башня с узким вертикальным витражом во всю высоту и большими окнами с мелкой расстекловкой; над входом — бело-синий козырёк с крупными буквами «ПОЧТА». Окна рядами, плоские крыши серого металла.",
+  "photos": [
+    {
+      "title": "Викисклад: Yekaterinburg LeninAvenue39 006 6291.jpg",
+      "url": "https://commons.wikimedia.org/wiki/File:Yekaterinburg_LeninAvenue39_006_6291.jpg",
+      "file": "photos/yekaterinburg-leninavenue39-006-6291.jpg",
+      "author": "Ludvig14",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "title": "Викисклад: Здание дома связи.jpg",
+      "url": "https://commons.wikimedia.org/wiki/File:%D0%97%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B4%D0%BE%D0%BC%D0%B0_%D1%81%D0%B2%D1%8F%D0%B7%D0%B8.jpg",
+      "file": "photos/zdanie-doma-svyazi.jpg",
+      "author": "Александр Сигачёв",
+      "license": "CC0"
+    },
+    {
+      "title": "Викисклад: Здание дома связи (20712).jpg",
+      "url": "https://commons.wikimedia.org/wiki/File:%D0%97%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B4%D0%BE%D0%BC%D0%B0_%D1%81%D0%B2%D1%8F%D0%B7%D0%B8_%2820712%29.jpg",
+      "file": "photos/zdanie-doma-svyazi-20712.jpg",
+      "author": "Александр Сигачёв",
+      "license": "CC0"
+    },
+    {
+      "title": "Викисклад: Здание дома связи (23381).jpg (интерьер)",
+      "url": "https://commons.wikimedia.org/wiki/File:%D0%97%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B4%D0%BE%D0%BC%D0%B0_%D1%81%D0%B2%D1%8F%D0%B7%D0%B8_%2823381%29.jpg",
+      "skip": true
+    },
+    {
+      "title": "Викисклад: категория «Main Post Office (Yekaterinburg)»",
+      "url": "https://commons.wikimedia.org/wiki/Category:Main_Post_Office_%28Yekaterinburg%29"
+    },
+    {
+      "title": "Википедия: Дом связи (Екатеринбург)",
+      "url": "https://ru.wikipedia.org/wiki/%D0%94%D0%BE%D0%BC_%D1%81%D0%B2%D1%8F%D0%B7%D0%B8_%28%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3%29"
+    },
+    {
+      "title": "Яндекс Панорамы (найдите вид с юга или юго-запада)",
+      "url": "https://yandex.ru/maps/?ll=60.608609%2C56.83941&z=18&l=stv%2Csta"
+    },
+    {
+      "title": "Google Street View",
+      "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=56.83941%2C60.608609"
+    },
+    {
+      "title": "PastVu — старые фото",
+      "url": "https://pastvu.com/?g=56.83941,60.608609&z=18&s=osm&t=mapnik&type=1"
+    },
+    {
+      "title": "Яндекс Картинки",
+      "url": "https://yandex.ru/images/search?text=%D0%93%D0%BB%D0%B0%D0%B2%D0%BF%D0%BE%D1%87%D1%82%D0%B0%D0%BC%D1%82%20%D0%BF%D1%80.%20%D0%9B%D0%B5%D0%BD%D0%B8%D0%BD%D0%B0%2C%2039%20%D0%95%D0%BA%D0%B0%D1%82%D0%B5%D1%80%D0%B8%D0%BD%D0%B1%D1%83%D1%80%D0%B3"
+    },
+    {
+      "title": "OpenStreetMap: relation/16896445",
+      "url": "https://www.openstreetmap.org/relation/16896445"
+    }
+  ],
+  "osm_tags": {
+    "addr:street": "проспект Ленина",
+    "addr:housenumber": "39",
+    "start_date": "1933",
+    "building": "commercial",
+    "building:levels": "10",
+    "wikidata": "Q55210808"
+  }
+}
