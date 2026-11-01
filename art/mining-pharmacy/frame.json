@@ -2,12 +2,12 @@
   "model": "mining-pharmacy",
   "size": [1536, 1024],
   "ppm": 30.043,
-  "origin": [705.2, 703.9],
+  "origin": [748.5, 703.9],
   "geometry": "689ee0b7b19b22e1",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

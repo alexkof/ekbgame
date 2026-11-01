@@ -1,13 +1,13 @@
 {
   "model": "glavpochtamt",
   "size": [1024, 1536],
-  "ppm": 12.706,
-  "origin": [372.8, 1026.1],
+  "ppm": 14.296,
+  "origin": [410.5, 1058.4],
   "geometry": "51eedca00266f7c6",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

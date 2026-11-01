@@ -1,13 +1,13 @@
 {
   "model": "iset-hotel",
-  "size": [1536, 1024],
-  "ppm": 17.926,
-  "origin": [1042.5, 616.7],
+  "size": [1024, 1024],
+  "ppm": 16.012,
+  "origin": [806.6, 605.6],
   "geometry": "e729853e0cc13338",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

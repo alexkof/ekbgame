@@ -95,7 +95,7 @@ def plausible(w, W):
 
 
 def find_warp(guide_bgr, mask, art, transparent):
-    """Аффинное преобразование рисунка к каркасу (или None)."""
+    """Масштаб и сдвиг рисунка к каркасу без поворота и наклона (или None)."""
     W = guide_bgr.shape[1]
     warp = np.eye(2, 3, dtype=np.float32)
     steps = [
@@ -109,6 +109,14 @@ def find_warp(guide_bgr, mask, art, transparent):
             w = ecc(a, b, warp, scale, blur)
         except cv2.error:
             continue
+        if not plausible(w, W) or max(abs(w[0, 1]), abs(w[1, 0])) > 0.08:
+            continue
+        # ECC оценивает полную аффинную матрицу. Убираем поворот и сдвиг строк,
+        # сохранив положение центра: импорт не должен заваливать вертикали.
+        center = np.array([W / 2, guide_bgr.shape[0] / 2], dtype=np.float32)
+        projected_center = w[:, :2] @ center + w[:, 2]
+        w[0, 1] = w[1, 0] = 0
+        w[:, 2] = projected_center - w[:, :2] @ center
         if plausible(w, W):
             warp, ok = w, True
     return warp if ok else None

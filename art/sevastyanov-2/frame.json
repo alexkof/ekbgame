@@ -2,12 +2,12 @@
   "model": "sevastyanov-2",
   "size": [1536, 1024],
   "ppm": 41.923,
-  "origin": [850.8, 615.5],
+  "origin": [868.6, 615.5],
   "geometry": "0dcfbc6b6d36995d",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

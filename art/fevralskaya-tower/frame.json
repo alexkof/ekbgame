@@ -2,12 +2,12 @@
   "model": "fevralskaya-tower",
   "size": [1024, 1536],
   "ppm": 10.349,
-  "origin": [375.8, 1210.6],
+  "origin": [485.1, 1210.6],
   "geometry": "08c7312a272763d0",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

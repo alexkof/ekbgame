@@ -1,13 +1,13 @@
 {
   "model": "lenina-39b",
-  "size": [1024, 1024],
-  "ppm": 18.703,
-  "origin": [505.5, 647.4],
+  "size": [1024, 1536],
+  "ppm": 22.408,
+  "origin": [560.2, 930.3],
   "geometry": "44d8c90095e86c76",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

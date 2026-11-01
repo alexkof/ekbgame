@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAP_CONFIG, MAP_LAYERS, MAP_MODELS, MAP_OBJECTS, MAP_STRAIGHTEN } from '../src/map/data';
-import { compileModel } from '../src/map/model';
+import { compileModel, drawModel } from '../src/map/model';
 import {
   createProjection,
   radialScale,
@@ -19,6 +19,48 @@ const P0 = createProjection(MAP_CONFIG);
 const { radius, power, extent } = MAP_CONFIG.warp;
 
 describe('проекция', () => {
+  it('вертикальные рёбра зданий остаются вертикальными при любом масштабе экрана', () => {
+    const cam = MAP_CONFIG.camera;
+    const view = {
+      a: cam.lean * cam.heightFactor,
+      c: cam.heightFactor,
+      t: cam.groundTilt,
+      height: P.height,
+    };
+    let checked = 0;
+    for (const id of ['sevastyanov-house', 'governor-residence', 'glavpochtamt']) {
+      const m = compileModel(MAP_MODELS[id]!, view);
+      const faces = m.groups.flatMap((g) => g.items).filter((item) => item.kind === 'face');
+      for (const scale of [0.5, 3, 12]) {
+        const paths: [number, number][][] = [];
+        const point = (x: number, y: number) => paths.at(-1)!.push([x, y]);
+        const ctx = {
+          beginPath: () => paths.push([]),
+          moveTo: point,
+          lineTo: point,
+          closePath: () => {},
+          fill: () => {},
+          stroke: () => {},
+        } as unknown as CanvasRenderingContext2D;
+        drawModel(ctx, m, view, scale, 'lines', 'models');
+        expect(paths.length).toBe(faces.length);
+        faces.forEach((face, n) => {
+          face.pts.forEach((p, i) => {
+            const j = (i + 1) % face.pts.length;
+            const q = face.pts[j]!;
+            if (p[0] !== q[0] || p[1] !== q[1] || p[2] === q[2]) return;
+            expect(paths[n]![i]![0], `${id}, масштаб ${scale}: наклон ребра`).toBeCloseTo(
+              paths[n]![j]![0],
+              8,
+            );
+            expect(paths[n]![i]![1]).not.toBe(paths[n]![j]![1]);
+            checked++;
+          });
+        });
+      }
+    }
+    expect(checked).toBeGreaterThan(100);
+  });
   it('гео → мир → гео возвращает исходную точку (и со спрямлением, и без)', () => {
     const points: LonLat[] = [
       [MAP_CONFIG.origin.lon, MAP_CONFIG.origin.lat],
@@ -157,7 +199,13 @@ describe('данные карты', () => {
   });
 
   it('id модели совпадает с именем файла, все модели собираются без NaN', () => {
-    const view = { a: 0.15, c: 0.62, t: 0.78, height: P.height };
+    const cam = MAP_CONFIG.camera;
+    const view = {
+      a: cam.lean * cam.heightFactor,
+      c: cam.heightFactor,
+      t: cam.groundTilt,
+      height: P.height,
+    };
     for (const [id, data] of Object.entries(MAP_MODELS)) {
       expect(data.id).toBe(id);
       const m = compileModel(data, view);

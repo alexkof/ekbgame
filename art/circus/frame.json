@@ -1,13 +1,13 @@
 {
   "model": "circus",
   "size": [1024, 1536],
-  "ppm": 8.444,
-  "origin": [499.8, 886],
+  "ppm": 8.995,
+  "origin": [527.7, 893.7],
   "geometry": "cd0f90ca9e173610",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

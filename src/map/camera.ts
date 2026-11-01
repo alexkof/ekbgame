@@ -1,6 +1,6 @@
 /**
  * Камера: какая часть плоскости изображения видна на экране.
- * Плоскость изображения: px = X + lean·h, py = Y·groundTilt − h (см. projection.ts).
+ * Плоскость изображения: px = X, py = Y·groundTilt − h (lean = 0, см. projection.ts).
  * zoom — CSS-пикселей на единицу плоскости.
  */
 export class Camera {

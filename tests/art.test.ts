@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MAP_IMAGE_URLS, MAP_MODELS } from '../src/map/data';
+import { MAP_CONFIG, MAP_IMAGE_URLS, MAP_MODELS } from '../src/map/data';
 import { loadModelImages } from '../src/map/images';
 import {
   artGeometryKey,
@@ -12,7 +12,12 @@ import {
 } from '../src/map/model';
 import type { ModelData, XY } from '../src/map/types';
 
-const VIEW: ViewParams = { a: 0.15, c: 0.62, t: 0.78, height: (z) => z };
+const VIEW: ViewParams = {
+  a: MAP_CONFIG.camera.lean * MAP_CONFIG.camera.heightFactor,
+  c: MAP_CONFIG.camera.heightFactor,
+  t: MAP_CONFIG.camera.groundTilt,
+  height: (z) => z,
+};
 const ART = join(__dirname, '..', 'art');
 
 const box = (w: number, h: number): XY[] => [
@@ -136,6 +141,12 @@ describe('рисунки зданий', () => {
       ).toBe(artGeometryKey(model!));
       expect([1024, 1536]).toContain(frame.size[0]);
       expect([1024, 1536]).toContain(frame.size[1]);
+      expect(frame.camera, `${d.name}: каркас снят другой камерой — art.py prepare`).toEqual(
+        MAP_CONFIG.camera,
+      );
+      expect(frame.heights, `${d.name}: изменился масштаб высот — art.py prepare`).toEqual(
+        MAP_CONFIG.heights,
+      );
     }
   });
 

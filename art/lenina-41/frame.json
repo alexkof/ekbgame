@@ -1,13 +1,13 @@
 {
   "model": "lenina-41",
-  "size": [1536, 1024],
-  "ppm": 15.956,
-  "origin": [486.6, 749.4],
+  "size": [1024, 1024],
+  "ppm": 14.926,
+  "origin": [297.1, 734.1],
   "geometry": "cedc74301f41fd76",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

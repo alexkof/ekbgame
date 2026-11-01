@@ -48,7 +48,8 @@ def multipart(fields, files):
 
 def generate(mid, model, quality, fidelity, key):
     d = ART / mid
-    frame = json.loads((d / 'frame.json').read_text(encoding='utf-8'))
+    frame_text = (d / 'frame.json').read_text(encoding='utf-8')
+    frame = json.loads(frame_text)
     prompt = (d / 'prompt.txt').read_text(encoding='utf-8')
     images = [d / 'guide.png']
     photos = sorted(p for p in (d / 'photos').glob('*') if p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp'))
@@ -78,6 +79,7 @@ def generate(mid, model, quality, fidelity, key):
     out = d / 'drawn' / f'{model}-{dt.datetime.now().strftime("%Y%m%d-%H%M%S")}.png'
     out.parent.mkdir(exist_ok=True)
     out.write_bytes(data)
+    out.with_suffix('.frame.json').write_text(frame_text, encoding='utf-8')
     print(f'{mid}: {out.relative_to(ROOT)}', file=sys.stderr)
     return out
 

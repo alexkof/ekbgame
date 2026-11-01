@@ -2,12 +2,12 @@
   "model": "kolizey",
   "size": [1024, 1024],
   "ppm": 18.628,
-  "origin": [487.1, 615.2],
+  "origin": [512, 615.2],
   "geometry": "6bf988e1cdfd5f13",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

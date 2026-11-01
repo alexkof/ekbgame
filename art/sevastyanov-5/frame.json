@@ -1,13 +1,13 @@
 {
   "model": "sevastyanov-5",
-  "size": [1024, 1024],
-  "ppm": 69.135,
-  "origin": [482.7, 634.2],
+  "size": [1024, 1536],
+  "ppm": 80.058,
+  "origin": [512, 909.5],
   "geometry": "f6d06ea4fbc1c68a",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

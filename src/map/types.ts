@@ -19,8 +19,8 @@ export interface MapConfig {
   warp: { radius: number; power: number; extent: number };
   /**
    * Косоугольная проекция «север сверху»: groundTilt — сжатие земли по вертикали,
-   * heightFactor — сколько экранных единиц даёт метр высоты, lean — наклон высоты вправо
-   * (видны южные и западные фасады).
+   * heightFactor — сколько экранных единиц даёт метр высоты. lean = 0: высота
+   * не смещает точку по горизонтали, вертикали зданий строго вертикальны на экране.
    */
   camera: { groundTilt: number; heightFactor: number; lean: number };
   /** Высоты до linearUpTo м умножаются на linearScale, выше растут как степень power. */

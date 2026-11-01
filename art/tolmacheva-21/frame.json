@@ -1,13 +1,13 @@
 {
   "model": "tolmacheva-21",
   "size": [1024, 1536],
-  "ppm": 28.716,
-  "origin": [536.9, 877.9],
+  "ppm": 30.236,
+  "origin": [577, 883.7],
   "geometry": "fc2e7c1c6f4a01aa",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

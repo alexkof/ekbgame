@@ -1,13 +1,13 @@
 {
   "model": "karla-libknekhta-23",
   "size": [1536, 1024],
-  "ppm": 13.815,
-  "origin": [1078.7, 445.8],
+  "ppm": 13.92,
+  "origin": [1111.8, 445.3],
   "geometry": "ce1d06aacb31fb20",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

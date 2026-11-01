@@ -24,7 +24,7 @@ type RGB = [number, number, number];
 
 /** Параметры косоугольной проекции, нужные модели. */
 export interface ViewParams {
-  /** Наклон высоты вправо: lean · heightFactor. */
+  /** Горизонтальное смещение высоты: lean · heightFactor; на карте 0 (строгие вертикали). */
   a: number;
   /** Экранных единиц на единицу высоты: heightFactor. */
   c: number;

@@ -2,12 +2,12 @@
   "model": "popov-monument",
   "size": [1024, 1536],
   "ppm": 195.177,
-  "origin": [390, 1276.2],
+  "origin": [512, 1276.2],
   "geometry": "dbaa3f3f1e8d0b41",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,

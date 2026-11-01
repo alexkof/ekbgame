@@ -2,12 +2,30 @@
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import cv2
 import numpy as np
 
-from art_import import process
+from art_import import find_warp, process
+
+
+class AlignmentTests(unittest.TestCase):
+    def test_alignment_does_not_tilt_verticals(self):
+        guide = np.full((128, 128, 3), 255, np.uint8)
+        art = np.full((128, 128, 4), 255, np.uint8)
+        mask = np.ones((128, 128), bool)
+        tilted = np.array([[1.02, 0.04, 2], [-0.03, 0.98, 3]], np.float32)
+        with patch('art_import.ecc', side_effect=lambda *args: tilted.copy()):
+            warp = find_warp(guide, mask, art, False)
+        self.assertIsNotNone(warp)
+        inverse = cv2.invertAffineTransform(warp)
+        points = np.array([[40, 10, 1], [40, 110, 1]], np.float32)
+        projected = points @ inverse.T
+        self.assertAlmostEqual(projected[0, 0], projected[1, 0], places=6)
+        center = np.array([64, 64, 1], np.float32)
+        np.testing.assert_allclose(warp @ center, tilted @ center, atol=1e-5)
 
 
 class TransparencyTests(unittest.TestCase):

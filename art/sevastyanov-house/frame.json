@@ -1,13 +1,13 @@
 {
   "model": "sevastyanov-house",
-  "size": [1024, 1024],
-  "ppm": 14.691,
-  "origin": [471.4, 657.8],
+  "size": [1024, 1536],
+  "ppm": 17.37,
+  "origin": [507.7, 940.4],
   "geometry": "54698896cd4e2774",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,
-    "lean": 0.24
+    "lean": 0
   },
   "heights": {
     "linearUpTo": 20,
