@@ -47,6 +47,7 @@
     },
     "r421103": {
       "id": "governor-residence",
+      "keep": true,
       "name": "Резиденция губернатора",
       "kind": "civic",
       "importance": 2,

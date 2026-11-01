@@ -347,8 +347,9 @@ def prompt(mid, model, props, info, frame):
         facts.append(f'построено: {tags["start_date"].replace("..", "–").replace(";", ", ")}')
     if tags.get('architect'):
         facts.append(f'архитектор: {tags["architect"].replace(";", ", ")}')
-    if tags.get('building:levels'):
-        facts.append(f'этажей: {tags["building:levels"]}')
+    levels = info.get('levels', tags.get('building:levels'))
+    if levels:
+        facts.append(f'этажей: {levels}')
     top = max((p['z'][1] for p in model['parts'] if 'z' in p and isinstance(p['z'], list)), default=0)
     facts.append(f'высота стен до {top:.0f} м')
     walls = visible_walls(model)

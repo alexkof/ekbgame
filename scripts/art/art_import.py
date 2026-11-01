@@ -144,11 +144,17 @@ def process(src, guide, mask, frame, out, check, align=True, inner=0.004, outer=
     r_in = max(2, round(inner * W))
     core = cv2.erode(m.astype(np.uint8), disk(r_in)).astype(bool)
     zone = cv2.dilate(m.astype(np.uint8), disk(round(outer * W))).astype(bool)
-    keep = core | (fg & (m | zone))
+    # У готового прозрачного рисунка альфа — источник истины: силуэт модели
+    # не должен закрашивать дворы, арки и прозрачные места внутри своего контура.
+    # Прозрачный рисунок уже вырезан: сохраняем и связанные со зданием шпили
+    # за границей маски. Отдельные посторонние объекты отсечёт проверка связности.
+    keep = fg if transparent else (core | (fg & zone))
     n, lab = cv2.connectedComponents(keep.astype(np.uint8), connectivity=8)
     attached = np.unique(lab[m & keep])
     keep = np.isin(lab, attached[attached > 0])
     alpha = cv2.GaussianBlur(keep.astype(np.uint8) * 255, (3, 3), 0)
+    if transparent:
+        alpha = np.minimum(alpha, art[..., 3])
     rgba = np.dstack([art[..., :3], alpha])
 
     # Проверка совмещения: рисунок на клетке, контуры каркаса красным.

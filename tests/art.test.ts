@@ -1,8 +1,15 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MAP_IMAGE_URLS, MAP_MODELS } from '../src/map/data';
-import { artGeometryKey, compileModel, insetRing, type ViewParams } from '../src/map/model';
+import { loadModelImages } from '../src/map/images';
+import {
+  artGeometryKey,
+  compileModel,
+  drawModel,
+  insetRing,
+  type ViewParams,
+} from '../src/map/model';
 import type { ModelData, XY } from '../src/map/types';
 
 const VIEW: ViewParams = { a: 0.15, c: 0.62, t: 0.78, height: (z) => z };
@@ -14,6 +21,88 @@ const box = (w: number, h: number): XY[] => [
   [w / 2, h / 2],
   [-w / 2, h / 2],
 ];
+
+describe('выбор между рисунком и моделью', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const data: ModelData = {
+    id: 'appearance-test',
+    name: 'Тестовое здание',
+    parts: [{ type: 'prism', outline: box(10, 6), z: [0, 8], color: '#fff', facade: 'none' }],
+    art: {
+      image: 'appearance-test.webp',
+      size: [100, 100],
+      origin: [50, 80],
+      ppm: 10,
+      geometry: '',
+    },
+  };
+
+  function context() {
+    const calls = {
+      drawImage: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      createLinearGradient: () => ({ addColorStop: vi.fn() }),
+    };
+    return { calls, ctx: calls as unknown as CanvasRenderingContext2D };
+  }
+
+  it('показывает рисунок, затем цветную модель, затем снова рисунок', async () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 100;
+        decode = () => Promise.resolve();
+      },
+    );
+    await loadModelImages({ test: data }, { 'appearance-test.webp': 'test://image' });
+    const m = compileModel(data, VIEW);
+    const { calls, ctx } = context();
+    drawModel(ctx, m, VIEW, 2, 'color', 'images');
+    expect(calls.drawImage).toHaveBeenCalledOnce();
+    expect(calls.fill).not.toHaveBeenCalled();
+
+    calls.drawImage.mockClear();
+    drawModel(ctx, m, VIEW, 2, 'color', 'models');
+    expect(calls.drawImage).not.toHaveBeenCalled();
+    expect(calls.fill).toHaveBeenCalled();
+
+    calls.fill.mockClear();
+    drawModel(ctx, m, VIEW, 2, 'color', 'images');
+    expect(calls.drawImage).toHaveBeenCalledOnce();
+    expect(calls.fill).not.toHaveBeenCalled();
+  });
+
+  it('показывает модель, если рисунок не загружен', () => {
+    const m = compileModel({ ...data, art: { ...data.art!, image: 'missing.webp' } }, VIEW);
+    const { calls, ctx } = context();
+    drawModel(ctx, m, VIEW, 2, 'color', 'images');
+    expect(calls.drawImage).not.toHaveBeenCalled();
+    expect(calls.fill).toHaveBeenCalled();
+  });
+
+  it('строит каркас по геометрии даже при загруженном рисунке', async () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 100;
+        decode = () => Promise.resolve();
+      },
+    );
+    await loadModelImages({ test: data }, { 'appearance-test.webp': 'test://image' });
+    const { calls, ctx } = context();
+    drawModel(ctx, compileModel(data, VIEW), VIEW, 2, 'lines', 'images');
+    expect(calls.drawImage).not.toHaveBeenCalled();
+    expect(calls.stroke).toHaveBeenCalled();
+  });
+});
 
 describe('рисунки зданий', () => {
   it('у каждого рисунка есть картинка, и он нарисован по текущей модели', () => {

@@ -112,10 +112,38 @@ export class MapView {
     );
   }
 
+  /** Поместить группу зданий целиком в кадр, оставив место для кнопок карты. */
+  focusObjects(objects: WorldObject[]): void {
+    if (!objects.length) return;
+    const bounds = objects.map((o) => {
+      const id = this.renderer.modelIdOf(o, this.state);
+      const b = id ? this.renderer.model(id)?.bounds : undefined;
+      const [x, y] = o.anchor;
+      const t = this.renderer.view.t;
+      return {
+        x0: x + (b?.u0 ?? -20) * o.scale,
+        x1: x + (b?.u1 ?? 20) * o.scale,
+        y0: y * t + (b?.v0 ?? -20) * o.scale,
+        y1: y * t + (b?.v1 ?? 20) * o.scale,
+      };
+    });
+    const x0 = Math.min(...bounds.map((b) => b.x0));
+    const x1 = Math.max(...bounds.map((b) => b.x1));
+    const y0 = Math.min(...bounds.map((b) => b.y0));
+    const y1 = Math.max(...bounds.map((b) => b.y1));
+    const zoom = Math.min(
+      this.camera.maxZoom,
+      Math.max(1, this.camera.width - 96) / Math.max(1, x1 - x0),
+      Math.max(1, this.camera.height - 260) / Math.max(1, y1 - y0),
+    );
+    this.flyTo((x0 + x1) / 2, (y0 + y1) / 2 - 30 / zoom, zoom, true);
+  }
+
   flyTo(cx: number, cy: number, zoom: number, animate: boolean): void {
     const cam = this.camera;
     zoom = Math.min(cam.maxZoom, Math.max(cam.minZoom, zoom));
     if (!animate) {
+      this.anim = null;
       cam.cx = cx;
       cam.cy = cy;
       cam.zoom = zoom;

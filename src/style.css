@@ -45,6 +45,7 @@ body {
 }
 
 .topbar,
+.map-display,
 .map-tools,
 .dev-info,
 .card,
@@ -110,6 +111,58 @@ body {
   text-decoration: none;
 }
 
+.map-display {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + 62px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.appearance-switch,
+.pilot-link {
+  pointer-events: auto;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.appearance-switch {
+  display: flex;
+  padding: 3px;
+}
+
+.appearance-switch button,
+.pilot-link {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.appearance-switch button {
+  border-radius: 9px;
+  background: transparent;
+}
+
+.appearance-switch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.appearance-switch button:focus-visible,
+.pilot-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .map-tools {
   position: absolute;
   right: 12px;
@@ -139,7 +192,7 @@ body {
 .dev-info {
   position: absolute;
   left: 12px;
-  top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 166px);
   max-width: calc(100% - 24px);
   padding: 6px 10px;
   border-radius: 8px;

@@ -1,9 +1,9 @@
 {
   "model": "governor-residence",
   "size": [1024, 1024],
-  "ppm": 10.543,
-  "origin": [725.5, 640.7],
-  "geometry": "9c06b8986c95670a",
+  "ppm": 11.216,
+  "origin": [749.1, 607.2],
+  "geometry": "a71dd14100e7174f",
   "camera": {
     "groundTilt": 0.78,
     "heightFactor": 0.62,

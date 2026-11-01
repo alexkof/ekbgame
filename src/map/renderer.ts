@@ -5,6 +5,7 @@ import {
   drawModel,
   drawTree,
   type CompiledModel,
+  type ModelAppearance,
   type ViewParams,
 } from './model';
 import { KIND_INFO, STYLE } from './style';
@@ -24,6 +25,8 @@ export interface RenderState {
   structures: Record<string, string | null>;
   selectedId: string | null;
   debug: boolean;
+  /** По умолчанию — рисунки; пока рисунка нет или он не загрузился, видна модель. */
+  appearance?: ModelAppearance;
 }
 
 interface Sprite {
@@ -293,7 +296,7 @@ export class MapRenderer {
         markers.push({ o, x: sx / dpr, y: sy / dpr });
         continue;
       }
-      const sprite = this.sprite(id, m, ps);
+      const sprite = this.sprite(id, m, ps, state.appearance ?? 'images');
       const k = ps / sprite.ps;
       const x0 = sx - sprite.ox * k;
       const y0 = sy - sprite.oy * k;
@@ -414,10 +417,10 @@ export class MapRenderer {
 
   // ---------------------------------------------------------- спрайты
 
-  private sprite(id: string, m: CompiledModel, ps: number): Sprite {
+  private sprite(id: string, m: CompiledModel, ps: number, appearance: ModelAppearance): Sprite {
     // Спрайты кэшируются ступенями по трети октавы масштаба.
     const step = Math.round(Math.log2(ps) * 3);
-    const key = `${id}|${step}`;
+    const key = `${id}|${step}|${appearance}`;
     let s = this.sprites.get(key);
     if (s) return s;
     let psB = Math.pow(2, step / 3);
@@ -433,7 +436,7 @@ export class MapRenderer {
     const ox = margin - b.u0 * psB;
     const oy = margin - b.v0 * psB;
     ctx.translate(ox, oy);
-    drawModel(ctx, m, this.view, psB);
+    drawModel(ctx, m, this.view, psB, 'color', appearance);
     s = { canvas, ox, oy, ps: psB };
     if (this.sprites.size > 160) this.sprites.delete(this.sprites.keys().next().value!);
     this.sprites.set(key, s);

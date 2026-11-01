@@ -63,8 +63,8 @@ python scripts/art/art.py prepare sevastyanov-house             # каркас, 
 | ----------------------------------------------- | --------------------- | ------------ |
 | [Екатеринбургский цирк](circus/)                | `circus`              | ждёт рисунка |
 | [«Февральская революция»](fevralskaya-tower/)   | `fevralskaya-tower`   | ждёт рисунка |
-| [Главпочтамт](glavpochtamt/)                    | `glavpochtamt`        | ждёт рисунка |
-| [Резиденция губернатора](governor-residence/)   | `governor-residence`  | ждёт рисунка |
+| [Главпочтамт](glavpochtamt/)                    | `glavpochtamt`        | нарисовано   |
+| [Резиденция губернатора](governor-residence/)   | `governor-residence`  | нарисовано   |
 | [Гостиница «Исеть»](iset-hotel/)                | `iset-hotel`          | ждёт рисунка |
 | [ул. Карла Либкнехта, 23](karla-libknekhta-23/) | `karla-libknekhta-23` | ждёт рисунка |
 | [Кинотеатр «Колизей»](kolizey/)                 | `kolizey`             | ждёт рисунка |
@@ -82,7 +82,7 @@ python scripts/art/art.py prepare sevastyanov-house             # каркас, 
 | [Дворовая постройка](sevastyanov-4/)            | `sevastyanov-4`       | ждёт рисунка |
 | [Дворовая постройка](sevastyanov-5/)            | `sevastyanov-5`       | ждёт рисунка |
 | [Дворовая постройка](sevastyanov-6/)            | `sevastyanov-6`       | ждёт рисунка |
-| [Дом Севастьянова](sevastyanov-house/)          | `sevastyanov-house`   | ждёт рисунка |
+| [Дом Севастьянова](sevastyanov-house/)          | `sevastyanov-house`   | нарисовано   |
 | [ул. Толмачёва, 16](tolmacheva-16/)             | `tolmacheva-16`       | ждёт рисунка |
 | [ул. Толмачёва, 21](tolmacheva-21/)             | `tolmacheva-21`       | ждёт рисунка |
 

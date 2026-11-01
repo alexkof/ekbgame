@@ -92,6 +92,9 @@ type Item = Face | TreeItem | SignItem | BillboardItem | ImageItem;
  */
 export type RenderMode = 'color' | 'clay' | 'normals' | 'lines';
 
+/** Рисунок здания (с запасной моделью) или исходная цветная модель. */
+export type ModelAppearance = 'images' | 'models';
+
 interface Group {
   depth: number;
   order: number;
@@ -749,6 +752,7 @@ export function drawModel(
   view: ViewParams,
   ps: number,
   mode: RenderMode = 'color',
+  appearance: ModelAppearance = 'images',
 ) {
   const pu = (p: V3) => (p[0] + view.a * p[2]) * ps;
   const pv = (p: V3) => (-view.t * p[1] - view.c * p[2]) * ps;
@@ -771,7 +775,7 @@ export function drawModel(
   }
 
   // Рисунок заменяет примитивы (только в цвете: каркасы для генератора — по модели).
-  const art = mode === 'color' && m.art ? getImage(m.art.image) : null;
+  const art = appearance === 'images' && mode === 'color' && m.art ? getImage(m.art.image) : null;
   if (art && m.art) {
     const k = ps / m.art.ppm;
     ctx.drawImage(

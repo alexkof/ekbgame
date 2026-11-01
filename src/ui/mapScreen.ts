@@ -9,6 +9,7 @@ import {
 } from '../map/data';
 import { loadModelImages } from '../map/images';
 import { MapView } from '../map/mapView';
+import type { ModelAppearance } from '../map/model';
 import { createProjection } from '../map/projection';
 import { KIND_INFO } from '../map/style';
 import { buildWorld, type WorldObject } from '../map/world';
@@ -24,6 +25,13 @@ export function mountMapScreen(root: HTMLElement): void {
         <div class="brand"><b>Екатеринбург</b><small>карта города · в разработке</small></div>
         <a class="topbar-link" href="./prototype/">Прототип</a>
       </header>
+      <div class="map-display">
+        <div class="appearance-switch" role="group" aria-label="Вид зданий">
+          <button data-appearance="images" aria-pressed="true">Изображения</button>
+          <button data-appearance="models" aria-pressed="false">Модели</button>
+        </div>
+        <button class="pilot-link" data-act="pilot">Пилотный квартал</button>
+      </div>
       <div class="map" id="map"></div>
       <div class="map-tools">
         <button data-act="in" title="Приблизить" aria-label="Приблизить">+</button>
@@ -48,6 +56,7 @@ export function mountMapScreen(root: HTMLElement): void {
     structures: game.cityMap.structures,
     selectedId: null,
     debug: false,
+    appearance: 'images',
   });
   // Рисунки зданий догружаются после первого кадра: до этого модели видны примитивами.
   void loadModelImages(MAP_MODELS, MAP_IMAGE_URLS).then(() => view.refreshModels());
@@ -106,6 +115,14 @@ export function mountMapScreen(root: HTMLElement): void {
     }
   };
   view.onSelect = select;
+  root.querySelectorAll<HTMLButtonElement>('[data-appearance]').forEach((button) =>
+    button.addEventListener('click', () => {
+      view.setState({ appearance: button.dataset.appearance as ModelAppearance });
+      root.querySelectorAll<HTMLButtonElement>('[data-appearance]').forEach((b) => {
+        b.setAttribute('aria-pressed', String(b === button));
+      });
+    }),
+  );
   // Для отладки в консоли браузера (только в режиме разработки).
   if (import.meta.env.DEV) Object.assign(window, { ekbMap: view });
 
@@ -130,6 +147,14 @@ export function mountMapScreen(root: HTMLElement): void {
           break;
         case 'all':
           view.overview();
+          break;
+        case 'pilot':
+          select(null);
+          view.focusObjects(
+            world.objects.filter((o) =>
+              ['sevastyanov-house', 'governor-residence', 'glavpochtamt'].includes(o.props.id),
+            ),
+          );
           break;
         case 'debug': {
           const debug = !view.getState().debug;

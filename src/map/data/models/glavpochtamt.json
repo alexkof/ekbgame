@@ -35,5 +35,13 @@
       "facade": "grid",
       "floor": 3.96
     }
-  ]
+  ],
+  "art": {
+    "image": "glavpochtamt/art.webp",
+    "size": [863, 944],
+    "origin": [304.8, 677.1],
+    "ppm": 12.706,
+    "geometry": "51eedca00266f7c6",
+    "source": "art/glavpochtamt/drawn/pilot-20261101.png"
+  }
 }

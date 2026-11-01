@@ -27,7 +27,7 @@
       "color": "#3aa58f",
       "roof": "#9fd3c7",
       "facade": "grid",
-      "floor": 4.05,
+      "floor": 8.1,
       "hip": 4.5
     },
     {
@@ -49,5 +49,13 @@
       "shape": "sphere",
       "color": "#9fd3c7"
     }
-  ]
+  ],
+  "art": {
+    "image": "sevastyanov-house/art.webp",
+    "size": [829, 820],
+    "origin": [386.4, 515.8],
+    "ppm": 14.691,
+    "geometry": "54698896cd4e2774",
+    "source": "art/sevastyanov-house/drawn/pilot-20261101.png"
+  }
 }

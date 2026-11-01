@@ -26,7 +26,9 @@ try {
 
 const server = await createServer({ root: ROOT, logLevel: 'error', server: { port: 0 } });
 await server.listen();
-const browser = await chromium.launch();
+const browser = await chromium.launch({
+  executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+});
 try {
   const page = await browser.newPage();
   page.on('pageerror', (e) => console.error('pageerror:', e.message));
