@@ -1,6 +1,7 @@
 """Проверки прозрачности: python -m unittest discover -s scripts/art -p 'test_*.py'."""
 
 import tempfile
+import json
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -9,6 +10,22 @@ import cv2
 import numpy as np
 
 from art_import import find_warp, process
+from art import validate_source_frame
+
+
+class SourceFrameTests(unittest.TestCase):
+    def test_missing_or_old_frame_cannot_be_imported_as_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / 'building.png'
+            frame = {'geometry': 'same', 'camera': {'lean': 0}, 'size': [1024, 1536]}
+            with self.assertRaisesRegex(SystemExit, 'нет building.frame.json'):
+                validate_source_frame(src, frame)
+            sidecar = src.with_suffix('.frame.json')
+            sidecar.write_text(json.dumps({**frame, 'camera': {'lean': .24}}))
+            with self.assertRaisesRegex(SystemExit, 'другому каркасу'):
+                validate_source_frame(src, frame)
+            sidecar.write_text(json.dumps(frame))
+            validate_source_frame(src, frame)
 
 
 class AlignmentTests(unittest.TestCase):

@@ -12,6 +12,7 @@ import {
   artGeometryKey,
   compileModel,
   drawModel,
+  modelForProjection,
   type CompiledModel,
   type RenderMode,
   type ViewParams,
@@ -92,7 +93,7 @@ const dpr = Math.min(window.devicePixelRatio || 1, 2);
 const compiled = new Map<string, CompiledModel>();
 function model(id: string): CompiledModel {
   let m = compiled.get(id);
-  if (!m) compiled.set(id, (m = compileModel(MODELS[id]!, VIEW)));
+  if (!m) compiled.set(id, (m = compileModel(modelForProjection(MODELS[id]!, MAP_CONFIG), VIEW)));
   return m;
 }
 

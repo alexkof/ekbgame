@@ -207,6 +207,9 @@ export interface ModelArt {
    * поменялась — рисунок устарел: нужен новый каркас и новый рисунок.
    */
   geometry: string;
+  /** Проекция исходного каркаса. Без неё или при несовпадении показывается 3D-модель. */
+  camera?: MapConfig['camera'];
+  heights?: MapConfig['heights'];
   /** Исходный рисунок в art/<id>/drawn/ — для истории. */
   source?: string;
 }

@@ -4,6 +4,7 @@ import type {
   BillboardPart,
   Facade,
   ImagePart,
+  MapConfig,
   ModelArt,
   ModelData,
   ModelPart,
@@ -364,6 +365,27 @@ export function artGeometryKey(data: ModelData): string {
     h2 = Math.imul(h2 ^ c, 0x050c5d1f) >>> 0;
   }
   return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
+}
+
+/** Старые пиксели нельзя исправить новой камерой: до перерисовки используем геометрию. */
+export function modelForProjection(
+  data: ModelData,
+  config: Pick<MapConfig, 'camera' | 'heights'>,
+): ModelData {
+  const art = data.art;
+  if (!art) return data;
+  const { camera: c, heights: h } = art;
+  if (
+    c?.lean === config.camera.lean &&
+    c.groundTilt === config.camera.groundTilt &&
+    c.heightFactor === config.camera.heightFactor &&
+    h?.linearUpTo === config.heights.linearUpTo &&
+    h.linearScale === config.heights.linearScale &&
+    h.power === config.heights.power &&
+    art.geometry === artGeometryKey(data)
+  )
+    return data;
+  return { ...data, art: undefined };
 }
 
 // --------------------------------------------------------------- сборка

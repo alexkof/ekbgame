@@ -4,6 +4,7 @@ import {
   drawMetroM,
   drawModel,
   drawTree,
+  modelForProjection,
   type CompiledModel,
   type ModelAppearance,
   type ViewParams,
@@ -101,7 +102,7 @@ export class MapRenderer {
     if (!m) {
       const data = this.models[id];
       if (!data) return null;
-      m = compileModel(data, this.view);
+      m = compileModel(modelForProjection(data, this.world.projection.config), this.view);
       this.compiled.set(id, m);
     }
     return m;

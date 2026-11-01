@@ -8,6 +8,7 @@ import {
   compileModel,
   drawModel,
   insetRing,
+  modelForProjection,
   type ViewParams,
 } from '../src/map/model';
 import type { ModelData, XY } from '../src/map/types';
@@ -56,6 +57,54 @@ describe('выбор между рисунком и моделью', () => {
     };
     return { calls, ctx: calls as unknown as CanvasRenderingContext2D };
   }
+
+  it('устаревший рисунок не попадает в отрисовку и не расширяет габарит модели', async () => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 100;
+        decode = () => Promise.resolve();
+      },
+    );
+    await loadModelImages({ test: data }, { 'appearance-test.webp': 'test://image' });
+    const current: ModelData = {
+      ...data,
+      art: {
+        ...data.art!,
+        geometry: artGeometryKey(data),
+        camera: { ...MAP_CONFIG.camera },
+        heights: { ...MAP_CONFIG.heights },
+      },
+    };
+    expect(modelForProjection(current, MAP_CONFIG)).toBe(current);
+    const stale = [
+      { ...current.art!, camera: { ...MAP_CONFIG.camera, lean: 0.24 } },
+      { ...current.art!, camera: { ...MAP_CONFIG.camera, groundTilt: 0.7 } },
+      { ...current.art!, camera: { ...MAP_CONFIG.camera, heightFactor: 0.7 } },
+      { ...current.art!, heights: { ...MAP_CONFIG.heights, linearScale: 2 } },
+      { ...current.art!, heights: { ...MAP_CONFIG.heights, linearUpTo: 30 } },
+      { ...current.art!, heights: { ...MAP_CONFIG.heights, power: 0.9 } },
+      { ...current.art!, geometry: 'old' },
+      { ...current.art!, camera: undefined },
+      { ...current.art!, heights: undefined },
+    ];
+    for (const art of stale) {
+      const source = { ...current, art };
+      const filtered = modelForProjection(source, MAP_CONFIG);
+      expect(filtered.art).toBeUndefined();
+      expect(source.art).toBe(art); // Исходник сохранён для истории, а не изменён на месте.
+      const m = compileModel(filtered, VIEW);
+      expect(m.bounds).toEqual(compileModel({ ...data, art: undefined }, VIEW).bounds);
+      const { calls, ctx } = context();
+      drawModel(ctx, m, VIEW, 2, 'color', 'images');
+      expect(calls.drawImage).not.toHaveBeenCalled();
+      expect(calls.fill).toHaveBeenCalled();
+    }
+    const { calls, ctx } = context();
+    drawModel(ctx, compileModel(modelForProjection(current, MAP_CONFIG), VIEW), VIEW, 2);
+    expect(calls.drawImage).toHaveBeenCalledOnce();
+  });
 
   it('показывает рисунок, затем цветную модель, затем снова рисунок', async () => {
     vi.stubGlobal(
@@ -116,10 +165,26 @@ describe('рисунки зданий', () => {
       expect(MAP_IMAGE_URLS[m.art.image], `${m.id}: нет картинки ${m.art.image}`).toBeDefined();
       expect(m.art.ppm).toBeGreaterThan(0);
       expect(m.art.size[0] * m.art.size[1]).toBeGreaterThan(0);
+      expect(m.art.camera, `${m.id}: рисунок по прежней камере — нужна перегенерация`).toEqual(
+        MAP_CONFIG.camera,
+      );
+      expect(m.art.heights, `${m.id}: рисунок по прежнему масштабу высот`).toEqual(
+        MAP_CONFIG.heights,
+      );
+      const sourceFrame = JSON.parse(
+        readFileSync(join(ART, '..', m.art.source!.replace(/\.[^.]+$/, '.frame.json')), 'utf-8'),
+      );
+      expect(m.art.camera, `${m.id}: камера рисунка не соответствует исходному кадру`).toEqual(
+        sourceFrame.camera,
+      );
+      expect(
+        m.art.heights,
+        `${m.id}: масштаб высот рисунка не соответствует исходному кадру`,
+      ).toEqual(sourceFrame.heights);
       expect(
         m.art.geometry,
         `${m.id}: модель изменилась после рисунка — python scripts/art/art.py prepare ${m.id}, ` +
-          `затем нарисовать заново или art.py import ${m.id} (старый рисунок по новому каркасу)`,
+          'затем нарисовать заново по текущему каркасу',
       ).toBe(artGeometryKey(m));
     }
   });
