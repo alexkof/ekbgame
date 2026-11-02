@@ -75,24 +75,24 @@ python scripts/art/art.py prepare sevastyanov-house             # каркас, 
 | [Главпочтамт](glavpochtamt/)                    | `glavpochtamt`        | нарисовано   |
 | [Резиденция губернатора](governor-residence/)   | `governor-residence`  | нарисовано   |
 | [Гостиница «Исеть»](iset-hotel/)                | `iset-hotel`          | ждёт рисунка |
-| [ул. Карла Либкнехта, 23](karla-libknekhta-23/) | `karla-libknekhta-23` | ждёт рисунка |
-| [Кинотеатр «Колизей»](kolizey/)                 | `kolizey`             | ждёт рисунка |
-| [пр. Ленина, 39Б](lenina-39b/)                  | `lenina-39b`          | ждёт рисунка |
-| [пр. Ленина, 41](lenina-41/)                    | `lenina-41`           | ждёт рисунка |
-| [Аптека горного ведомства](mining-pharmacy/)    | `mining-pharmacy`     | ждёт рисунка |
-| [Памятник А. С. Попову](popov-monument/)        | `popov-monument`      | ждёт рисунка |
-| [ул. Пушкина, 19](pushkina-19/)                 | `pushkina-19`         | ждёт рисунка |
-| [ул. Пушкина, 19](pushkina-19-2/)               | `pushkina-19-2`       | ждёт рисунка |
-| [ул. Пушкина, 22](pushkina-22/)                 | `pushkina-22`         | ждёт рисунка |
-| [Ротонда на набережной](rotunda/)               | `rotunda`             | ждёт рисунка |
-| [Дворовая постройка](sevastyanov-1/)            | `sevastyanov-1`       | ждёт рисунка |
-| [Дворовая постройка](sevastyanov-2/)            | `sevastyanov-2`       | ждёт рисунка |
-| [Дворовая постройка](sevastyanov-3/)            | `sevastyanov-3`       | ждёт рисунка |
-| [Дворовая постройка](sevastyanov-4/)            | `sevastyanov-4`       | ждёт рисунка |
-| [Дворовая постройка](sevastyanov-5/)            | `sevastyanov-5`       | ждёт рисунка |
-| [Дворовая постройка](sevastyanov-6/)            | `sevastyanov-6`       | ждёт рисунка |
+| [ул. Карла Либкнехта, 23](karla-libknekhta-23/) | `karla-libknekhta-23` | нарисовано   |
+| [Кинотеатр «Колизей»](kolizey/)                 | `kolizey`             | нарисовано   |
+| [пр. Ленина, 39Б](lenina-39b/)                  | `lenina-39b`          | нарисовано   |
+| [пр. Ленина, 41](lenina-41/)                    | `lenina-41`           | нарисовано   |
+| [Аптека горного ведомства](mining-pharmacy/)    | `mining-pharmacy`     | нарисовано   |
+| [Памятник А. С. Попову](popov-monument/)        | `popov-monument`      | нарисовано   |
+| [ул. Пушкина, 19](pushkina-19/)                 | `pushkina-19`         | нарисовано   |
+| [ул. Пушкина, 19](pushkina-19-2/)               | `pushkina-19-2`       | нарисовано   |
+| [ул. Пушкина, 22](pushkina-22/)                 | `pushkina-22`         | нарисовано   |
+| [Ротонда на набережной](rotunda/)               | `rotunda`             | нарисовано   |
+| [Дворовая постройка](sevastyanov-1/)            | `sevastyanov-1`       | нарисовано   |
+| [Дворовая постройка](sevastyanov-2/)            | `sevastyanov-2`       | нарисовано   |
+| [Дворовая постройка](sevastyanov-3/)            | `sevastyanov-3`       | нарисовано   |
+| [Дворовая постройка](sevastyanov-4/)            | `sevastyanov-4`       | нарисовано   |
+| [Дворовая постройка](sevastyanov-5/)            | `sevastyanov-5`       | нарисовано   |
+| [Дворовая постройка](sevastyanov-6/)            | `sevastyanov-6`       | нарисовано   |
 | [Дом Севастьянова](sevastyanov-house/)          | `sevastyanov-house`   | нарисовано   |
-| [ул. Толмачёва, 16](tolmacheva-16/)             | `tolmacheva-16`       | ждёт рисунка |
-| [ул. Толмачёва, 21](tolmacheva-21/)             | `tolmacheva-21`       | ждёт рисунка |
+| [ул. Толмачёва, 16](tolmacheva-16/)             | `tolmacheva-16`       | нарисовано   |
+| [ул. Толмачёва, 21](tolmacheva-21/)             | `tolmacheva-21`       | нарисовано   |
 
 <!-- /здания -->
