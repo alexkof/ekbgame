@@ -20,5 +20,23 @@
       "floor": 3.5,
       "hip": 4.5
     }
-  ]
+  ],
+  "art": {
+    "image": "pushkina-19/art.webp",
+    "size": [440, 512],
+    "origin": [214.3, 314.1],
+    "ppm": 16.014,
+    "geometry": "432eddd8331e0c82",
+    "camera": {
+      "groundTilt": 0.78,
+      "heightFactor": 0.62,
+      "lean": 0
+    },
+    "heights": {
+      "linearUpTo": 20,
+      "linearScale": 1.5,
+      "power": 0.8
+    },
+    "source": "art/pushkina-19/drawn/codex-20261102.png"
+  }
 }
