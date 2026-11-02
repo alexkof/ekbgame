@@ -191,7 +191,7 @@ describe('рисунки зданий', () => {
 
   it('каркасы в art/ построены по текущим моделям', () => {
     const dirs = readdirSync(ART, { withFileTypes: true }).filter(
-      (d) => d.isDirectory() && !['quarters', 'tasks'].includes(d.name),
+      (d) => d.isDirectory() && !['quarters', 'tasks', 'backgrounds'].includes(d.name),
     );
     expect(dirs.length).toBeGreaterThan(0);
     for (const d of dirs) {

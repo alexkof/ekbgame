@@ -1,0 +1,36 @@
+{
+  "id": "sevastyanov",
+  "size": [1536, 1024],
+  "bounds": {
+    "x0": -92.82475906693969,
+    "x1": 456.5701428173302,
+    "y0": -305.5867650101711,
+    "y1": 60.67650291267543
+  },
+  "image": "sevastyanov/ground.webp",
+  "feather": 48,
+  "projection": "ac87f5de",
+  "objects": [
+    "tolmacheva-21",
+    "karla-libknekhta-23",
+    "pushkina-22",
+    "pushkina-19",
+    "sevastyanov-1",
+    "sevastyanov-2",
+    "governor-residence",
+    "tolmacheva-16",
+    "pushkina-19-2",
+    "lenina-39b",
+    "sevastyanov-3",
+    "kolizey",
+    "lenina-41",
+    "glavpochtamt",
+    "sevastyanov-4",
+    "sevastyanov-5",
+    "sevastyanov-6",
+    "sevastyanov-house",
+    "mining-pharmacy",
+    "rotunda",
+    "popov-monument"
+  ]
+}

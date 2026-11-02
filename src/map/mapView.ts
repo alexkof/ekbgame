@@ -1,4 +1,5 @@
 import { Camera } from './camera';
+import type { GroundImage } from './ground';
 import { MapRenderer, type RenderState } from './renderer';
 import type { LonLat, ModelData } from './types';
 import type { World, WorldObject } from './world';
@@ -49,6 +50,11 @@ export class MapView {
   /** Перерисовать модели заново (загрузились рисунки или текстуры). */
   refreshModels(): void {
     this.renderer.clearModelCache();
+    this.invalidate();
+  }
+
+  setGroundImages(grounds: GroundImage[]): void {
+    this.renderer.setGroundImages(grounds);
     this.invalidate();
   }
 

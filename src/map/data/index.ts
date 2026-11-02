@@ -7,6 +7,7 @@ import type {
   StraightenGrid,
 } from '../types';
 import type { MapLayers } from '../world';
+import type { GroundArt } from '../ground';
 import config from './config.json';
 import districts from './layers/districts.geo.json';
 import land from './layers/land.geo.json';
@@ -58,4 +59,21 @@ const imageFiles = import.meta.glob<string>('./models/**/*.{png,jpg,webp}', {
 /** Картинки моделей (рисунки, текстуры): имя относительно папки моделей → адрес. */
 export const MAP_IMAGE_URLS: Record<string, string> = Object.fromEntries(
   Object.entries(imageFiles).map(([path, url]) => [path.replace('./models/', ''), url]),
+);
+
+const groundFiles = import.meta.glob<GroundArt>('./backgrounds/*.json', {
+  eager: true,
+  import: 'default',
+});
+
+export const MAP_GROUND: GroundArt[] = Object.values(groundFiles);
+
+const groundImages = import.meta.glob<string>('./backgrounds/**/*.webp', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+
+export const MAP_GROUND_URLS: Record<string, string> = Object.fromEntries(
+  Object.entries(groundImages).map(([path, url]) => [path.replace('./backgrounds/', ''), url]),
 );

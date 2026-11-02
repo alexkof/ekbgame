@@ -1,4 +1,5 @@
 import type { Camera } from './camera';
+import { groundCovers, type GroundImage } from './ground';
 import {
   compileModel,
   drawMetroM,
@@ -71,6 +72,7 @@ export class MapRenderer {
   private shadowPaths = new Map<string, Path2D>();
   private hits: Hit[] = [];
   private trees: World['trees'];
+  private grounds: GroundImage[] = [];
   dpr = 1;
 
   constructor(
@@ -95,6 +97,14 @@ export class MapRenderer {
   clearModelCache(): void {
     this.compiled.clear();
     this.sprites.clear();
+  }
+
+  setGroundImages(grounds: GroundImage[]): void {
+    this.grounds = grounds;
+  }
+
+  private hasGround(x: number, y: number): boolean {
+    return this.grounds.some(({ art }) => groundCovers(art, x, y * this.view.t));
   }
 
   model(id: string): CompiledModel | null {
@@ -230,6 +240,21 @@ export class MapRenderer {
       ctx.globalAlpha = 1;
     }
 
+    // --- статичное благоустройство кварталов поверх базовой земли, под всеми объектами
+    for (const { art, image } of this.grounds) {
+      const b = art.bounds;
+      if (!inView({ x0: b.x0, y0: b.y0 / t, x1: b.x1, y1: b.y1 / t })) continue;
+      ctx.drawImage(image, b.x0, b.y0 / t, b.x1 - b.x0, (b.y1 - b.y0) / t);
+    }
+
+    // Удалённый объект оставляет игровой пустой участок поверх статичного мощения.
+    for (const o of this.world.objects) {
+      if (inView(o.bbox) && this.modelIdOf(o, state) === null && this.hasGround(...o.anchor)) {
+        ctx.fillStyle = STYLE.plot.sand;
+        ctx.fill(this.plotPath(o));
+      }
+    }
+
     // --- границы участков (выбранный и пустые — жёлтым пунктиром) и тени
     for (const o of this.world.objects) {
       if (!inView(o.bbox)) continue;
@@ -242,7 +267,7 @@ export class MapRenderer {
         ctx.lineWidth = (selected ? 2.5 : 1.5) * px;
         ctx.stroke(path);
         ctx.setLineDash([]);
-      } else {
+      } else if (!this.hasGround(...o.anchor)) {
         ctx.strokeStyle = STYLE.plot.edge;
         ctx.lineWidth = 0.8 * px;
         ctx.stroke(path);
@@ -272,6 +297,7 @@ export class MapRenderer {
     const drawTreesUpTo = (y: number) => {
       for (; ti < trees.length && trees[ti]!.y <= y; ti++) {
         const tr = trees[ti]!;
+        if (this.hasGround(tr.x, tr.y)) continue;
         if (tr.x < treeVis.x0 || tr.x > treeVis.x1 || tr.y < treeVis.y0 || tr.y > treeVis.y1)
           continue;
         const rpx = tr.r * z * dpr;

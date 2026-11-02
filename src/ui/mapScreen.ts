@@ -1,6 +1,8 @@
 import { applyAction, createInitialState, type GameAction, type GameState } from '../core';
 import {
   MAP_CONFIG,
+  MAP_GROUND,
+  MAP_GROUND_URLS,
   MAP_IMAGE_URLS,
   MAP_LAYERS,
   MAP_MODELS,
@@ -8,6 +10,7 @@ import {
   MAP_STRAIGHTEN,
 } from '../map/data';
 import { loadModelImages } from '../map/images';
+import { groundProjectionKey, loadGroundImages } from '../map/ground';
 import { MapView } from '../map/mapView';
 import type { ModelAppearance } from '../map/model';
 import { createProjection } from '../map/projection';
@@ -60,6 +63,11 @@ export function mountMapScreen(root: HTMLElement): void {
   });
   // Рисунки зданий догружаются после первого кадра: до этого модели видны примитивами.
   void loadModelImages(MAP_MODELS, MAP_IMAGE_URLS).then(() => view.refreshModels());
+  void loadGroundImages(
+    MAP_GROUND,
+    MAP_GROUND_URLS,
+    groundProjectionKey(MAP_CONFIG, MAP_STRAIGHTEN),
+  ).then((grounds) => view.setGroundImages(grounds));
 
   const dispatch = (action: GameAction) => {
     game = applyAction(game, action);
@@ -152,7 +160,7 @@ export function mountMapScreen(root: HTMLElement): void {
           select(null);
           view.focusObjects(
             world.objects.filter((o) =>
-              ['sevastyanov-house', 'governor-residence', 'glavpochtamt'].includes(o.props.id),
+              MAP_GROUND.find((a) => a.id === 'sevastyanov')?.objects.includes(o.props.id),
             ),
           );
           break;
